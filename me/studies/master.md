@@ -18,4 +18,4 @@ Universitat Politècnica de Catalunya
 
 ### Additional Topics:
 
-I did a master thesis based on evaluating Thread (network protocol) for future IoT application layer frameworks such as Mater.
+I did a master thesis based on evaluating Thread (network protocol) for future IoT application layer frameworks such as Matter.
