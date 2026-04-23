@@ -2,7 +2,7 @@
 
 ### Certification:
 
-Project Management Principles (PMP)
+Certified Professional in Managing AI (CPMAI)
 
 ### Institution:
 
