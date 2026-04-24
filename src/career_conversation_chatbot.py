@@ -7,11 +7,13 @@ from agents_folder.conversation_agent import conversation_agent
 load_dotenv(override=True)
 
           
-async def chat(self, message, history):
+async def chat(message, history):
     
     messages = []
-    for msg in history:
-        messages.append({"role": msg["role"],"content": msg["content"][0]["text"]})
+
+    if history:
+        for msg in history:
+            messages.append({"role": msg["role"],"content": msg["content"][0]["text"]})
 
     messages.append({"role": "user", "content": message})
     

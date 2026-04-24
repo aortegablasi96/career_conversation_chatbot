@@ -1,7 +1,7 @@
 # Profile:
 
 - Name: Andreu Ortega Blasi
-- Date of birth: 16/02/1996
+- Date of birth: 16/02/1996 (30 years old)
 - From: Barcelona, Spain
 - Current location: Lugano, Switzerland
 - Swiss residence permit: B
