@@ -1,6 +1,7 @@
 from pathlib import Path
 from agents import Agent, function_tool, ModelSettings
 from dotenv import load_dotenv
+from langchain_cohere import CohereRerank
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
@@ -37,13 +38,26 @@ def search_knowledge_base(query: str):
     seen = set()
     combined: list[Document] = []
 
+    # To remove duplicates from the same method
     for doc in chroma_docs + bm_docs:
         cid = doc.metadata.get("chunk_id") or doc.metadata.get("source")
         if cid not in seen:
             seen.add(cid)
             combined.append(doc)
 
-    return combined
+    # Reranking section
+    reranker = CohereRerank(
+        top_n=RETRIEVAL_K,
+        model="rerank-english-v3.0",
+    )
+    
+    reranked_indexes = reranker.rerank(query=query,documents=combined)
+
+    reranked_documents = []
+    for index in reranked_indexes:
+        reranked_documents.append(combined[index["index"]])
+
+    return reranked_documents
 
 INSTRUCTIONS = "You are a look-up agent that given a query will look up in the database, using the tool provided, the relevant content found."
 

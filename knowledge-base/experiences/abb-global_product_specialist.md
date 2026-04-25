@@ -14,7 +14,7 @@ Quartino, Switzerland
 
 ### Duration:
 
-From October 2024 to January 2026
+From October 2024 to January 2026 (which means I do not work anymore, and that's my last experience)
 
 ### Summary:
 
