@@ -21,7 +21,6 @@ market-driven products by bridging business, engineering, and data teams.
 I am passionate about building intelligent products that drive automation, decision
 making, and operational efficiency.
 
-
 ### Other facts:
 
 I lived in 4 countries: Spain, Belgium, Italy and Switzerland. I am an active guy who loves to do sport as much as I can. I also love reading about history, economics and politics, I am a passione ancient coins collector and I am a casual guitar player and good chess player. 

@@ -1,23 +1,17 @@
-# streamlit_app.py
-# Run with: streamlit run streamlit_app.py
-#
-# Requirements:
-#   pip install streamlit chromadb pandas
-#
-# Optional for embedding visualization:
-#   pip install umap-learn plotly numpy
-
+from pathlib import Path
 import streamlit as st
 import chromadb
-from pathlib import Path
 import pandas as pd
 import json
 import re
 
+import traceback
+
+DB_NAME = str(Path(__file__).parent.parent / "vector_db")
+
 st.set_page_config(page_title="Chroma DB Explorer", layout="wide")
 
 st.title("🔎 Chroma DB Explorer")
-st.write("Browse all collections in a Chroma persistent database.")
 
 # -----------------------------
 # Helpers
@@ -28,8 +22,13 @@ def safe_json(obj):
     except Exception:
         return str(obj)
 
+def safe_str(x):
+    if x is None:
+        return ""
+    return str(x)
+
 def highlight_text(text, query):
-    if not query or not text:
+    if not query:
         return text
     try:
         pattern = re.compile(re.escape(query), re.IGNORECASE)
@@ -47,48 +46,44 @@ def list_collection_names(persist_path: str):
     cols = client.list_collections()
     return sorted([c.name for c in cols])
 
-def load_collection_data(client, collection_name: str, limit: int, include_embeddings: bool):
-    include_fields = ["documents", "metadatas"]
-    if include_embeddings:
-        include_fields.append("embeddings")
-
+def load_collection_data(client, collection_name: str, limit: int):
     col = client.get_collection(collection_name)
 
-    data = col.get(
-        limit=int(limit),
-        include=include_fields,
-    )
+    data = col.get(limit=int(limit), include=["documents", "metadatas"])
 
-    ids = data.get("ids", [])
-    docs = data.get("documents", [])
-    metas = data.get("metadatas", [])
-    embeds = data.get("embeddings", None)
+    ids = data.get("ids") or []
+    docs = data.get("documents") or []
+    metas = data.get("metadatas") or []
 
-    df = pd.DataFrame(
-        {
-            "collection": [collection_name] * len(ids),
-            "id": ids,
-            "text": docs,
-            "metadata": metas,
-        }
-    )
-    return df, embeds
+    # Chroma sometimes returns None docs -> normalize length
+    if docs is None:
+        docs = [""] * len(ids)
+    if metas is None:
+        metas = [{}] * len(ids)
+
+    # Ensure same length
+    n = min(len(ids), len(docs), len(metas))
+    ids, docs, metas = ids[:n], docs[:n], metas[:n]
+
+    return pd.DataFrame({
+        "collection": [collection_name] * n,
+        "id": ids,
+        "text": [safe_str(x) for x in docs],
+        "metadata": metas
+    })
 
 # -----------------------------
-# Sidebar: Connection settings
+# Sidebar Settings
 # -----------------------------
-st.sidebar.header("⚙️ Chroma Settings")
+st.sidebar.header("⚙️ Settings")
 
 persist_path = st.sidebar.text_input(
-    "Persistent Chroma Path",
-    value=str(Path(__file__).parent.parent / "vector_db"),
-    help="Folder path used by chromadb.PersistentClient(path=...)",
+    "Chroma persist path",
+    value=DB_NAME,
 )
 
-include_embeddings = st.sidebar.checkbox("Include embeddings (slower)", value=False)
-
 load_limit = st.sidebar.number_input(
-    "Load Limit per collection",
+    "Load limit per collection",
     min_value=10,
     max_value=50000,
     value=500,
@@ -96,148 +91,124 @@ load_limit = st.sidebar.number_input(
 )
 
 # -----------------------------
-# Load client + collections
+# Connect to Chroma
 # -----------------------------
 try:
     client = load_client(persist_path)
     collection_names = list_collection_names(persist_path)
 except Exception as e:
-    st.sidebar.error("Could not connect to Chroma.")
-    st.sidebar.write(str(e))
+    st.error("❌ Failed to connect to Chroma")
+    st.code(str(e))
     st.stop()
 
 if not collection_names:
-    st.warning("No collections found in this Chroma database.")
+    st.warning("No collections found.")
     st.stop()
 
-st.sidebar.success(f"Connected! Found {len(collection_names)} collections.")
+st.sidebar.success(f"Found {len(collection_names)} collections")
 
 # -----------------------------
-# Sidebar: Collection selector
+# Collection selection
 # -----------------------------
-st.sidebar.header("📚 Collections")
-
-mode = st.sidebar.radio(
-    "Browse mode",
-    ["Single collection", "All collections combined"],
-)
+mode = st.sidebar.radio("Browse mode", ["Single collection", "Multiple collections"])
 
 if mode == "Single collection":
-    selected_collections = [
-        st.sidebar.selectbox("Choose collection", collection_names)
-    ]
+    selected_collections = [st.sidebar.selectbox("Collection", collection_names)]
 else:
     selected_collections = st.sidebar.multiselect(
-        "Select collections to include",
+        "Collections",
         collection_names,
-        default=collection_names,
+        default=collection_names
     )
 
 if not selected_collections:
-    st.info("Select at least one collection.")
+    st.warning("Select at least one collection.")
     st.stop()
 
 # -----------------------------
-# Load selected collection data
+# Load data
 # -----------------------------
 dfs = []
-all_embeddings = {}
-
 for cname in selected_collections:
     try:
-        df_col, embeds = load_collection_data(client, cname, load_limit, include_embeddings)
-        dfs.append(df_col)
-        all_embeddings[cname] = embeds
+        dfs.append(load_collection_data(client, cname, load_limit))
     except Exception as e:
-        st.warning(f"Failed to load collection: {cname}")
-        st.write(str(e))
+        st.warning(f"Failed to load collection `{cname}`")
+        st.code(str(e))
 
 if not dfs:
-    st.warning("No data loaded.")
+    st.error("No data loaded from any collection.")
     st.stop()
 
 df = pd.concat(dfs, ignore_index=True)
 
-st.caption(f"Loaded **{len(df)}** total records from {len(selected_collections)} collections.")
+st.caption(f"Loaded **{len(df)}** chunks total.")
 
 # -----------------------------
-# Sidebar Filters
+# Filters
 # -----------------------------
 st.sidebar.header("🔍 Filters")
 
-search_text = st.sidebar.text_input("Search in chunk text", value="")
+search_text = st.sidebar.text_input("Search text", "")
 
-metadata_key = st.sidebar.text_input(
-    "Metadata key filter (optional)",
-    value="",
-    help="Example: source, file, page, chunk_id, etc.",
-)
-
-metadata_value = st.sidebar.text_input(
-    "Metadata value contains (optional)",
-    value="",
-)
+metadata_key = st.sidebar.text_input("Metadata key (optional)", "")
+metadata_value = st.sidebar.text_input("Metadata contains (optional)", "")
 
 collection_filter = st.sidebar.multiselect(
-    "Filter by collection",
-    options=sorted(df["collection"].unique()),
-    default=sorted(df["collection"].unique()),
+    "Filter collections",
+    sorted(df["collection"].unique()),
+    default=sorted(df["collection"].unique())
 )
 
-# Apply filters
 filtered_df = df.copy()
 
 if collection_filter:
     filtered_df = filtered_df[filtered_df["collection"].isin(collection_filter)]
 
 if search_text.strip():
-    mask = filtered_df["text"].fillna("").str.contains(search_text, case=False, na=False)
-    filtered_df = filtered_df[mask]
+    filtered_df = filtered_df[
+        filtered_df["text"].str.contains(search_text, case=False, na=False)
+    ]
 
 if metadata_key.strip() and metadata_value.strip():
-    def meta_contains(meta):
+    def meta_match(meta):
         if not isinstance(meta, dict):
             return False
-        val = meta.get(metadata_key, "")
-        return metadata_value.lower() in str(val).lower()
+        return metadata_value.lower() in safe_str(meta.get(metadata_key, "")).lower()
 
-    filtered_df = filtered_df[filtered_df["metadata"].apply(meta_contains)]
+    filtered_df = filtered_df[filtered_df["metadata"].apply(meta_match)]
 
 filtered_df = filtered_df.reset_index(drop=True)
 
-st.sidebar.write(f"📌 Matching records: **{len(filtered_df)}**")
+st.sidebar.write(f"Matches: **{len(filtered_df)}**")
 
 if len(filtered_df) == 0:
     st.warning("No matching chunks.")
     st.stop()
 
 # -----------------------------
-# Main layout
+# Layout
 # -----------------------------
 left, right = st.columns([0.45, 0.55], gap="large")
 
 with left:
     st.subheader("📄 Chunk List")
 
-    filtered_df["preview"] = filtered_df["text"].fillna("").apply(
-        lambda x: x[:200].replace("\n", " ")
+    # preview column
+    filtered_df["preview"] = filtered_df["text"].apply(
+        lambda x: safe_str(x)[:200].replace("\n", " ")
     )
 
-    # Create a nice label for selectbox
-    filtered_df["label"] = filtered_df.apply(
+    labels = filtered_df.apply(
         lambda r: f"[{r['collection']}] {r['id']} :: {r['preview']}",
         axis=1
-    )
+    ).tolist()
 
-    selected_label = st.selectbox(
-        "Select a chunk",
-        filtered_df["label"].tolist(),
-        index=0,
-    )
+    selected_label = st.selectbox("Select chunk", labels, index=0)
 
-    selected_row = filtered_df[filtered_df["label"] == selected_label].iloc[0]
+    selected_index = labels.index(selected_label)
+    selected_row = filtered_df.iloc[selected_index]
 
-    st.markdown("### 📋 Table View")
     st.dataframe(
         filtered_df[["collection", "id", "preview"]],
         use_container_width=True,
@@ -254,14 +225,12 @@ with right:
     st.code(safe_json(selected_row["metadata"]), language="json")
 
     st.markdown("### 🧾 Chunk Text")
-    chunk_text = selected_row["text"] or ""
-    st.markdown(highlight_text(chunk_text, search_text))
+    st.markdown(highlight_text(selected_row["text"], search_text))
 
-    st.markdown("### 🧠 Similarity Search (Query Collection)")
-    st.caption("Similarity search works inside one collection at a time.")
+    st.markdown("### 🧠 Similarity Search (within same collection)")
+    query = st.text_input("Query text", "")
 
-    query = st.text_input("Query text", value="")
-    n_results = st.slider("Top N results", 1, 20, 5)
+    n_results = st.slider("Top N", 1, 20, 5)
 
     if st.button("Run similarity query"):
         try:
@@ -269,88 +238,19 @@ with right:
             results = col.query(
                 query_texts=[query],
                 n_results=int(n_results),
-                include=["documents", "metadatas", "distances"],
+                include=["documents", "metadatas", "distances"]
             )
 
-            res_docs = results["documents"][0]
-            res_metas = results["metadatas"][0]
-            res_dists = results["distances"][0]
-            res_ids = results["ids"][0]
+            out_df = pd.DataFrame({
+                "id": results["ids"][0],
+                "distance": results["distances"][0],
+                "preview": [safe_str(x)[:200].replace("\n", " ") for x in results["documents"][0]],
+                "metadata": [safe_json(m)[:200] for m in results["metadatas"][0]],
+            })
 
-            out_df = pd.DataFrame(
-                {
-                    "id": res_ids,
-                    "distance": res_dists,
-                    "text_preview": [d[:200].replace("\n", " ") for d in res_docs],
-                    "metadata": [safe_json(m)[:200] for m in res_metas],
-                }
-            )
-
-            st.markdown("### 📌 Query Results")
             st.dataframe(out_df, use_container_width=True)
 
         except Exception as e:
-            st.error("Query failed.")
-            st.write(str(e))
-
-# -----------------------------
-# Optional: Embedding visualization (UMAP)
-# -----------------------------
-st.divider()
-st.subheader("🗺️ Embedding Map (Optional)")
-
-st.write(
-    "Embedding visualization is only meaningful within a single collection "
-    "because different collections may use different embedding models."
-)
-
-if not include_embeddings:
-    st.info("Enable **Include embeddings** in the sidebar to use embedding visualization.")
-else:
-    if len(collection_filter) != 1:
-        st.info("Select exactly **one** collection in the sidebar filter to view its embedding map.")
-    else:
-        colname = collection_filter[0]
-        embeds = all_embeddings.get(colname)
-
-        if embeds is None:
-            st.warning("No embeddings loaded for this collection.")
-        else:
-            try:
-                import numpy as np
-                import umap
-                import plotly.express as px
-
-                st.write(f"Computing 2D projection for collection `{colname}`...")
-
-                X = np.array(embeds)
-
-                reducer = umap.UMAP(
-                    n_neighbors=15,
-                    min_dist=0.1,
-                    metric="cosine",
-                    random_state=42
-                )
-                coords = reducer.fit_transform(X)
-
-                viz_df = df[df["collection"] == colname].copy().reset_index(drop=True)
-                viz_df["x"] = coords[: len(viz_df), 0]
-                viz_df["y"] = coords[: len(viz_df), 1]
-                viz_df["preview"] = viz_df["text"].fillna("").apply(lambda x: x[:120].replace("\n", " "))
-
-                fig = px.scatter(
-                    viz_df,
-                    x="x",
-                    y="y",
-                    hover_data=["id", "preview"],
-                    title=f"UMAP projection of embeddings: {colname}",
-                )
-
-                st.plotly_chart(fig, use_container_width=True)
-
-            except ImportError:
-                st.warning("Install extra packages for embedding visualization:")
-                st.code("pip install umap-learn plotly numpy")
-            except Exception as e:
-                st.error("Failed to build embedding visualization.")
-                st.write(str(e))
+            st.error("Query failed")
+            st.code(str(e))
+            traceback.print_exc()

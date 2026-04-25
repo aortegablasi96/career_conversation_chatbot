@@ -7,7 +7,6 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
-
 from dotenv import load_dotenv
 
 MODEL = "gpt-4o-mini"
@@ -63,5 +62,5 @@ def create_embeddings(chunks):
 if __name__ == "__main__":
     documents = fetch_documents()
     chunks = create_chunks(documents)
-    create_embeddings(chunks)
+    vectorstore = create_embeddings(chunks)    
     print("Ingestion complete")
