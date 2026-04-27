@@ -24,14 +24,10 @@ The current datetime is {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
 #    "If the user is engaging in discussion, try to steer them towards getting in touch "
 #    "via email; ask for their email and record it using your record_user_details tool."
 
-lookup_tool = lookup_agent.as_tool(tool_name="LookupTool", tool_description="Tool to search in the RAG database")
-
 conversation_agent = Agent(
     name="ConversationAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
-    tools=[lookup_tool],
-    model_settings=ModelSettings(tool_choice="required")
 )
 
         

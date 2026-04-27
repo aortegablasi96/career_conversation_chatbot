@@ -2,7 +2,7 @@ from agents import trace, gen_trace_id, Runner
 import gradio as gr
 from dotenv import load_dotenv
 
-from agents_folder.conversation_agent import conversation_agent
+from agents_folder.router_agent import router_agent
 
 load_dotenv(override=True)
 
@@ -18,7 +18,7 @@ async def chat(message, history):
     messages.append({"role": "user", "content": message})
     
     result = await Runner.run(
-            conversation_agent,
+            router_agent,
             messages,
         )
     return result.final_output

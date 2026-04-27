@@ -1,4 +1,4 @@
-## Additional experience
+## AI-Initiatives:
 
 ### Hands-on in a diverse range of AI projects:
 
