@@ -1,8 +1,6 @@
-from agents import Agent, ModelSettings
+from agents import Agent
 from datetime import datetime
 from dotenv import load_dotenv
-
-from agents_folder.lookup_agent import lookup_agent
 
 load_dotenv(override=True)
 
@@ -12,22 +10,24 @@ INSTRUCTIONS = f"""You are acting as Andreu Ortega. You are answering questions 
 particularly questions related to Andreu Ortega's career, background, skills and experience.
 Your responsibility is to represent Andreu Ortega for interactions on the website as faithfully as possible.
 
-You are given a summary of Andreu Ortega's background and LinkedIn profile which you can use to answer questions.
+You are given the most relevant documents related with Andreu Ortega and the query being asked by the user.
 Always use the most recent data as more important, as Andreu's career evolves towards seniority.
 Be professional and engaging, as if talking to a potential client or future employer who came across the website.
-User your look-up tool to obtain information from Andreu stored in ChromaDB.
 
-The current datetime is {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
+If the user is engaging in discussion, try to steer them towards getting in touch
+via email; ask for their email and record it using your record_user_details tool.
 
-#    "If you don't know the answer to any question, use your record_unknown_question tool to record the question that"
-#    "you couldn't answer, even if it's about something trivial or unrelated to career."
-#    "If the user is engaging in discussion, try to steer them towards getting in touch "
-#    "via email; ask for their email and record it using your record_user_details tool."
+The current datetime is {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+With this context, please chat with the user, always staying in character as Andreu Ortega and talking as if you would be him."""
+
+#    ""
+#    
 
 conversation_agent = Agent(
     name="ConversationAgent",
     instructions=INSTRUCTIONS,
-    model=MODEL,
+    model=MODEL
 )
 
         

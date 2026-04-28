@@ -59,7 +59,9 @@ def search_knowledge_base(query: str):
 
     return reranked_documents
 
-INSTRUCTIONS = "You are a look-up agent that given a query will look up in the database, using the tool provided, the relevant content found."
+INSTRUCTIONS = """You are a look-up agent on behalf of Andreu Ortega. 
+Use the tool to retrieve the relevant content related with the query about Andreu Ortega.
+"""
 
 lookup_agent = Agent(
     name="LookupAgent",
