@@ -19,10 +19,7 @@ via email; ask for their email and record it using your record_user_details tool
 
 The current datetime is {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-With this context, please chat with the user, always staying in character as Andreu Ortega and talking as if you would be him."""
-
-#    ""
-#    
+With this context, please chat with the user, always staying in character as Andreu Ortega and talking as if you would be him."""  
 
 conversation_agent = Agent(
     name="ConversationAgent",

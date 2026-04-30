@@ -1,5 +1,6 @@
+from typing import Literal, Optional
 from agents import Agent
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
 
@@ -19,10 +20,23 @@ Treat the message as being about Andreu Ortega if it asks about:
 - projects, portfolio, achievements
 - personal life, hobbies, interests
 - background, biography, origin, location
+
+As an exception, the user could also want to be contacted (e.g. "I want to be contacted", "How can we get in touch?") or provide his contact details. That also has to be a valid message.
+'user_details' output MUST be null if all the 'user_details' fields (name, email, reason) are null.
+
+In case of being a valid message, you also need to identify if the user is asking about Andreu Ortega or is requesting to be contacted (in 'message_type'). 
+If the message is not valid, 'message_type' MUST be null.
 """
+
+class UserDetails(BaseModel):
+    name: Optional[str] = Field(description="Name of the user")
+    email: Optional[str] = Field(description="Email of the user")
+    reason: Optional[str] = Field(description="Details which topic would like to be discussed")
 
 class FilteredResponse(BaseModel):
     response: bool = Field(description="A boolean value indicating if the query is related with Andreu or not")
+    user_details: Optional[UserDetails] = Field(description="User contact details")
+    message_type: Optional[Literal["info","contact"]] = Field(description="Indicates if the message's purpose is to ask for information or to get contacted")
 
 filter_agent = Agent(
     name="FilterAgent",
