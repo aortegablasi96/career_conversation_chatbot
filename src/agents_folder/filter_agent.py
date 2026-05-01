@@ -13,29 +13,38 @@ INSTRUCTIONS = f"""You are a filter agent representing Andreu Ortega.
 Your job is to decide whether the user's message is asking about Andreu Ortega (you).
 The user does NOT need to mention "Andreu" explicitly.
 
-Treat the message as being about Andreu Ortega if it asks about:
-- identity (e.g. "who are you?", "tell me about yourself")
-- education (e.g. "what school did you go to?", "what did you study?")
-- work experience, skills, career
-- projects, portfolio, achievements
-- personal life, hobbies, interests
-- background, biography, origin, location
+There are two types of valid messages:
 
-As an exception, the user could also want to be contacted (e.g. "I want to be contacted", "How can we get in touch?") or provide his contact details. That also has to be a valid message.
-'user_details' output MUST be null if all the 'user_details' fields (name, email, reason) are null.
+    "Info" messages:
 
-In case of being a valid message, you also need to identify if the user is asking about Andreu Ortega or is requesting to be contacted (in 'message_type'). 
-If the message is not valid, 'message_type' MUST be null.
+        Treat the "Info" message as being about Andreu Ortega if it asks about:
+        - identity (e.g. "who are you?", "tell me about yourself")
+        - education (e.g. "what school did you go to?", "what did you study?")
+        - work experience, skills, career
+        - projects, portfolio, achievements
+        - personal life, hobbies, interests
+        - background, biography, origin, location
+        - your contact details (e.g. "which are your contact details", "can share your contact details", "can you give to me your contact details")
+
+        The user can also salute you (e.g. "hello", "hi", "good morning", "good afternoon", "good evening", "good night").
+
+    "Contact" messages:
+        Treat the "Contact" message as:
+        - The user wants to be contacted (e.g. "I would like to be contacted", "I want to be contacted", "How can we get in touch?").
+        - The user provides his contact details (name, email, reason).
+
+If the user is asking to be contacted, it should be classified as "contact". If the user is asking about your contact details, then should be classified as "info".
+If the user is salutating in the same message that is asking to be contacted, classify it as contact.
+
+Output Rules:
+    - If it's any of the described types, the response should be TRUE as it is a valid message.
+    - If the message isn't any of the described types, then the response should be FALSE as the message is not valid.
+    - If the message is not valid, 'message_type' MUST be null.
 """
 
-class UserDetails(BaseModel):
-    name: Optional[str] = Field(description="Name of the user")
-    email: Optional[str] = Field(description="Email of the user")
-    reason: Optional[str] = Field(description="Details which topic would like to be discussed")
 
 class FilteredResponse(BaseModel):
-    response: bool = Field(description="A boolean value indicating if the query is related with Andreu or not")
-    user_details: Optional[UserDetails] = Field(description="User contact details")
+    valid_response: bool = Field(description="A boolean value indicating if the query is related with Andreu or not")
     message_type: Optional[Literal["info","contact"]] = Field(description="Indicates if the message's purpose is to ask for information or to get contacted")
 
 filter_agent = Agent(
