@@ -2,7 +2,7 @@ import os
 import requests
 from pydantic import BaseModel, Field
 from typing import Dict, Literal, Optional
-from agents import Agent, ModelSettings, function_tool
+from agents import Agent, ModelSettings, Runner, function_tool
 from dotenv import load_dotenv
 
 from agents_folder.filter_agent import filter_agent, UserDetails
@@ -10,6 +10,19 @@ from agents_folder.lookup_agent import lookup_agent
 from agents_folder.conversation_agent import conversation_agent
 
 load_dotenv(override=True)
+
+async def route(messages):
+    router_result = await Runner.run(router_agent, messages)
+    router_decision = router_result.final_output
+
+    if router_decision.step == "1.1":
+        return "I'm sorry, I can't answer that question."
+    elif router_decision.step == "2.1":
+        return "I'm sorry, I can't answer that question."
+    elif router_decision.step == "2.2":
+        return "I'm sorry, I can't answer that question."
+    elif router_decision.step == "3":
+        return "I'm sorry, I can't answer that question."
 
 MODEL = "gpt-4o-mini"
 
@@ -45,51 +58,18 @@ IF response == true AND message_type == "contact" AND user_details is not null:
 IF response == true AND message_type == "info":
     Next step is 3
 
-STEP 1.1:
-As a final answer, tell the user that you are a chatbot that only answers questions about Andreu Ortega and ask the user to query again.
-TERMINATE the workflow.  
-
-STEP 2.1:
-DO NOT call any tool.
-As a final answer, ask the user for name, email, and reason for contact.
-TERMINATE the workflow.
-
-STEP 2.2:
-Call RecordUserDetailsTool using the user_details from FilterTool.
-As final answer, Confirm the user that you will get in touch with them soon.
-TERMINATE the workflow.
-
-STEP 3:
-Call LookUpTool using the user query.
-If documents are found -> go to 4.1
-If documents are not found -> go to 4.2
-
-STEP 4.1:
-Call ConversationTool with the retrieved documents and produce the final answer.
-TERMINATE the workflow.
-
-STEP 4.2:
-Call RecordQuestionsTool with the unknown user query.
-Then, as a final answer, output a short message saying you don't have that information.
-TERMINATE the workflow.
-
 IMPORTANT RULES:
 - Tools may ONLY be called when explicitly required by the current step.
-- After steps 1.1, 2.1, 2.2, 4.1, or 4.2 the workflow TERMINATES.
-- Every time you are about to execute a step (1.1, 2.1, 2.2, 3, 4.1, 4.2),
-  you MUST first output a RouterDecision JSON object indicating the step.
 
 Output format:
 1) Output RouterDecision JSON with the step you are about to execute.
 """
 
 class RouterDecision(BaseModel):
-    step: Literal["1","1.1", "2.1", "2.2", "3", "4.1", "4.2"]
+    step: Literal["1.1", "2.1", "2.2", "3"]
     response: bool
     message_type: Optional[Literal["info", "contact"]] = None
     user_details: Optional[UserDetails] = Field(description="User contact details")
-    email: Optional[str] = None
-    final_answer: Optional[str] = None
 
 def push(text):
     requests.post(
