@@ -1,11 +1,11 @@
 import os
 import requests
 from pydantic import BaseModel, Field
-from typing import Dict
+from typing import Dict, Literal, Optional
 from agents import Agent, ModelSettings, function_tool
 from dotenv import load_dotenv
 
-from agents_folder.filter_agent import filter_agent
+from agents_folder.filter_agent import filter_agent, UserDetails
 from agents_folder.lookup_agent import lookup_agent
 from agents_folder.conversation_agent import conversation_agent
 
@@ -13,45 +13,83 @@ load_dotenv(override=True)
 
 MODEL = "gpt-4o-mini"
 
-INSTRUCTIONS = f"""You are rounting agent acting on behalf of Andreu Otega.
-The user will make queries about Andreu's professional career, studies and hobbies.
-You role is to execute the following flow, step by step, using the agent-as-tools provided only when specified:
+INSTRUCTIONS = f"""You are a routing agent acting on behalf of Andreu Ortega.
 
-    1. Use the 'FilterTool' tool to do a first check on the received query.
-        You MUST use ONLY the output of Step 1 (FilterTool):
-            - response (bool)
-            - user_details (object or None)
-            - message_type ("info" or "contact" or None)
+You MUST follow the workflow strictly and execute steps in order.
+Before executing any step, you MUST first output a JSON object matching RouterDecision
+showing the step you are about to execute.
 
-        DO NOT re-interpret the user message.
+Workflow:
 
-        Routing rules:
-            
-            IF response == False:
-                → go to Step 1.1
-            
-            IF response == True AND message_type == "info":
-                → go to Step 3
+STEP 1:
+Call FilterTool on the user query.
+FilterTool returns:
+- response (bool)
+- user_details (object or null)
+- message_type ("info" or "contact" or null)
 
-            IF response == True AND message_type == "contact" and user_details is None:
-                → go to Step 2.1
-            
-            IF response == True AND message_type == "contact" user_details is not None:
-                → go to Step 2.2
-
-    1.1. The workflow TERMINATES and no further steps are allowed. The output should explain, as if would be Andreu in first person, that the chatbot is just inteded for answering queries about yourself and ask the user to query again.
-    2.1 The workflow TERMINATES and no further steps are allowed.. Ask for the user details (name, mail and ask why he wants to be contacted).
-    2.2 Use the 'RecordUserDetailsTool' tool to send a push notification. The workflow TERMINATES and no further steps are allowed.
-    3. Use the 'LookUpTool' to retrieve the most important documents related with the user query. If you obtain information, go to the step 4.1, otherwise go to the step 4.2.
-    4.1. Use the documents obtained in the last step in the 'ConversationTool' tool to produce an answer to the user's query based on the documents given to the tool.
-    4.2. Use the 'RecordQuestionsTool' tool to send a push notification with the uknown user's query.
-
-Output the response obtained from the last step as it is. 
+After receiving FilterTool output, decide next step ONLY using these values.
+DO NOT reinterpret the user message.
 
 Routing rules:
-- The model may only call tools if the workflow step explicitly AND unambiguously requires it AND all required fields are present. If not stated in the step you are currently doing, DO NOT call the tool.
-- Never skip any step of the workflow unless indicated in the step's description.
+
+IF response == false:
+    Next step is 1.1
+
+IF response == true AND message_type == "contact" AND user_details is null:
+    Next step is 2.1
+
+IF response == true AND message_type == "contact" AND user_details is not null:
+    Next step is 2.2
+
+IF response == true AND message_type == "info":
+    Next step is 3
+
+STEP 1.1:
+As a final answer, tell the user that you are a chatbot that only answers questions about Andreu Ortega and ask the user to query again.
+TERMINATE the workflow.  
+
+STEP 2.1:
+DO NOT call any tool.
+As a final answer, ask the user for name, email, and reason for contact.
+TERMINATE the workflow.
+
+STEP 2.2:
+Call RecordUserDetailsTool using the user_details from FilterTool.
+As final answer, Confirm the user that you will get in touch with them soon.
+TERMINATE the workflow.
+
+STEP 3:
+Call LookUpTool using the user query.
+If documents are found -> go to 4.1
+If documents are not found -> go to 4.2
+
+STEP 4.1:
+Call ConversationTool with the retrieved documents and produce the final answer.
+TERMINATE the workflow.
+
+STEP 4.2:
+Call RecordQuestionsTool with the unknown user query.
+Then, as a final answer, output a short message saying you don't have that information.
+TERMINATE the workflow.
+
+IMPORTANT RULES:
+- Tools may ONLY be called when explicitly required by the current step.
+- After steps 1.1, 2.1, 2.2, 4.1, or 4.2 the workflow TERMINATES.
+- Every time you are about to execute a step (1.1, 2.1, 2.2, 3, 4.1, 4.2),
+  you MUST first output a RouterDecision JSON object indicating the step.
+
+Output format:
+1) Output RouterDecision JSON with the step you are about to execute.
 """
+
+class RouterDecision(BaseModel):
+    step: Literal["1","1.1", "2.1", "2.2", "3", "4.1", "4.2"]
+    response: bool
+    message_type: Optional[Literal["info", "contact"]] = None
+    user_details: Optional[UserDetails] = Field(description="User contact details")
+    email: Optional[str] = None
+    final_answer: Optional[str] = None
 
 def push(text):
     requests.post(
@@ -89,12 +127,12 @@ filter_tool = filter_agent.as_tool(tool_name="FilterTool", tool_description="Too
 lookup_tool = lookup_agent.as_tool(tool_name="LookupTool", tool_description="Tool to search in the RAG database the most important documents related with the query")
 conversation_tool = conversation_agent.as_tool(tool_name="ConversationTool", tool_description="Tool to formulate an answer to the query based in the documents provided")
 
-router_tools = [filter_tool, lookup_tool, conversation_tool, record_unknown_question,record_user_details]
+router_tools = [filter_tool, lookup_tool, conversation_tool, record_unknown_question, record_user_details]
 
 router_agent = Agent(
     name="RouterAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
     tools=router_tools,
-    model_settings=ModelSettings(tool_choice="required")
+    output_type=RouterDecision
 )

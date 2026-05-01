@@ -21,10 +21,12 @@ Treat the message as being about Andreu Ortega if it asks about:
 - personal life, hobbies, interests
 - background, biography, origin, location
 
-As an exception, the user could also want to be contacted (e.g. "I want to be contacted", "How can we get in touch?") or provide his contact details. That also has to be a valid message.
-'user_details' output MUST be null if all the 'user_details' fields (name, email, reason) are null.
+As an exception, the user can also salute you (e.g. "hello", "hi", "good morning", "good afternoon", "good evening", "good night")
 
-In case of being a valid message, you also need to identify if the user is asking about Andreu Ortega or is requesting to be contacted (in 'message_type'). 
+As an exception, the user could also want to be contacted (e.g. "I want to be contacted", "How can we get in touch?") or provide his contact details. That also has to be a valid message.
+'user_details' output MUST be null if the following 'user_details' fields (name, email) are null.
+
+In case of being a valid message, you also need to identify if the user is asking about Andreu Ortega (which also would include saluting you) or is requesting to be contacted (in 'message_type'). 
 If the message is not valid, 'message_type' MUST be null.
 """
 
