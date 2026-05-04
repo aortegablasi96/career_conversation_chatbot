@@ -1,25 +1,31 @@
-from agents import trace, gen_trace_id
+import asyncio
+from agents import trace, gen_trace_id, Runner
 import gradio as gr
 from dotenv import load_dotenv
 
-from agents_folder.router_agent import route
+from agents_folder.router_agent import router_agent
+from graph import Graph
 
 load_dotenv(override=True)
 
+class App:
+    def __init__(self,trace_id):
+        self.graph = Graph(trace_id)
+
+    async def setup(self):
+        await self.graph.setup()
           
-async def chat(message, history):
+    async def chat(self, message, history):   
+        """ Handle user message submission. """
+        results = await self.graph.run_superstep(
+                message, history
+            )
+        return results.final_output
     
-    messages = []
-
-    if history:
-        for msg in history:
-            messages.append({"role": msg["role"],"content": msg["content"][0]["text"]})
-
-    messages.append({"role": "user", "content": message})
-    
-    result = await route(messages)
-    return result.final_output
-
+async def main(trace_id):
+    app = App(trace_id)
+    await app.setup()
+    gr.ChatInterface(app.chat).launch(inbrowser=True)
 
 if __name__ == "__main__":
 
