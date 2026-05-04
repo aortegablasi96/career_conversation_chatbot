@@ -2,10 +2,10 @@ import os
 import requests
 from pydantic import BaseModel, Field
 from typing import Dict, Literal, Optional
-from agents import Agent, ModelSettings, Runner, function_tool
+from agents import Agent, ModelSettings
 from dotenv import load_dotenv
 
-from agents_folder.filter_agent import filter_agent, UserDetails
+from agents_folder.filter_agent import filter_agent, FilteredResponse
 from agents_folder.lookup_agent import lookup_agent
 from agents_folder.conversation_agent import conversation_agent
 
@@ -26,93 +26,46 @@ async def route(messages):
 
 MODEL = "gpt-4o-mini"
 
-INSTRUCTIONS = f"""You are a routing agent acting on behalf of Andreu Ortega.
+INSTRUCTIONS = f"""You are rounting agent acting on behalf of Andreu Otega.
+The user will make queries about Andreu's professional career, studies, personal information and hobbies. The user also may want to be contacted by Andreu Ortega.
 
-You MUST follow the workflow strictly and execute steps in order.
-Before executing any step, you MUST first output a JSON object matching RouterDecision
-showing the step you are about to execute.
+You MUST follow the workflow strictly and follow the routing described in the steps.
 
 Workflow:
 
-STEP 1:
-Call FilterTool on the user query.
-FilterTool returns:
-- response (bool)
-- user_details (object or null)
-- message_type ("info" or "contact" or null)
+    Step 1: Use the 'FilterTool' tool to do a first check on the received query (use the query exactly as it is).
+        Based on the 'FilterTool' output (do not reinterpret anything):
+        - If you have do not have a valid response, then go to Step 2.
+        - If you have a valid response and the message_type type is and ONLY is 'info', then go to Step 3.
+        - If you have a valid response and the message_type is and ONLY is 'contact', then go to Step 4. 
 
-After receiving FilterTool output, decide next step ONLY using these values.
-DO NOT reinterpret the user message.
+        You cannot repeat Step 1 and either have to choose Step 2, Step 3 or Step 4.
 
-Routing rules:
+    Step 2: The workflow TERMINATES and no further steps are allowed. The final answer must explain, as if would be Andreu in first person, that the chatbot is just inteded for answering queries about yourself and ask the user to query again.
+    Step 3: Use the 'LookUpTool' to retrieve the most important documents related with the user query. Then go to step 4.
+    Step 4: Use the initial query to call the 'ConversationTool' tool to produce the final answer to the user's query.
 
-IF response == false:
-    Next step is 1.1
-
-IF response == true AND message_type == "contact" AND user_details is null:
-    Next step is 2.1
-
-IF response == true AND message_type == "contact" AND user_details is not null:
-    Next step is 2.2
-
-IF response == true AND message_type == "info":
-    Next step is 3
-
-IMPORTANT RULES:
-- Tools may ONLY be called when explicitly required by the current step.
-
-Output format:
-1) Output RouterDecision JSON with the step you are about to execute.
+Important rules:
+- The model may only call tools if the workflow step explicitly AND unambiguously requires it AND all required fields are present. If not stated in the step you are currently doing, DO NOT call the tool.
+- Do not skip any state unless mentioned in the workflow.
 """
 
 class RouterDecision(BaseModel):
-    step: Literal["1.1", "2.1", "2.2", "3"]
-    response: bool
-    message_type: Optional[Literal["info", "contact"]] = None
-    user_details: Optional[UserDetails] = Field(description="User contact details")
-
-def push(text):
-    requests.post(
-        "https://api.pushover.net/1/messages.json",
-        data={
-            "token": os.getenv("PUSHOVER_TOKEN"),
-            "user": os.getenv("PUSHOVER_USER"),
-            "message": text,
-        }
-    )
-
-class RecordDetailsInput(BaseModel):
-    email: str = Field(description="User email")
-    name: str = Field(description="User name", default="Name not provided") 
-    notes: str = Field(description="User additional notes", default="not provided")
-
-@function_tool(name_override="RecordUserDetailsTool")
-def record_user_details(payload: RecordDetailsInput) -> Dict[str, str]:
-    """ Send a push notification with the user's information """
-    
-    push(f"Career conversation agent - Recording contact details of interested user: {payload.name} with email {payload.email} and notes {payload.notes}")
-    return {"recorded": "ok"}
-
-class RecordUnknownQuestionInput(BaseModel):
-    query: str = Field(description="Query to be sent as push notification")
-
-@function_tool(name_override="RecordQuestionsTool")
-def record_unknown_question(payload: RecordUnknownQuestionInput) -> Dict[str, str]:
-    """ Send a push notification with the unkown query """
-
-    push(f"Career Conversation Agent - Recording unknown question: {payload.query}")
-    return {"recorded": "ok"}
+    step: Literal["1", "2", "3", "4", "END"] = Field(description="To indicate the step decided to do")
+    reasoning: str = Field(description="Describes the reason of being in the current step")
+    final_answer: str = Field(description="Final answer of the workflow, which will be used to answer the user's query")
+    filter_tool_output: Optional[FilteredResponse] = Field(description="Output of the 'FilterTool' tool")
 
 filter_tool = filter_agent.as_tool(tool_name="FilterTool", tool_description="Tool to filter if query should be admitted or not")
 lookup_tool = lookup_agent.as_tool(tool_name="LookupTool", tool_description="Tool to search in the RAG database the most important documents related with the query")
 conversation_tool = conversation_agent.as_tool(tool_name="ConversationTool", tool_description="Tool to formulate an answer to the query based in the documents provided")
 
-router_tools = [filter_tool, lookup_tool, conversation_tool, record_unknown_question, record_user_details]
+router_tools = [filter_tool, lookup_tool, conversation_tool]
 
 router_agent = Agent(
     name="RouterAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
     tools=router_tools,
-    output_type=RouterDecision
+    model_settings=ModelSettings(tool_choice="required"),
 )
