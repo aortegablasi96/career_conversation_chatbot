@@ -6,6 +6,7 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
+from pydantic import BaseModel, Field
 
 
 load_dotenv(override=True)
@@ -63,10 +64,15 @@ INSTRUCTIONS = """You are a look-up agent on behalf of Andreu Ortega.
 Use the tool to retrieve the relevant content related with the query about Andreu Ortega.
 """
 
+class SearchOutput  (BaseModel):
+    output: list[Document] = Field(description="List of documents found")
+    found_information: bool = Field(description="If information is found or not")
+
 lookup_agent = Agent(
     name="LookupAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
     tools=[search_knowledge_base],
-    model_settings=ModelSettings(tool_choice="required")
+    model_settings=ModelSettings(tool_choice="required"),
+    output_type=SearchOutput
 )

@@ -26,4 +26,5 @@ if __name__ == "__main__":
     trace_id = gen_trace_id()
     with trace("Enhanced Research trace", trace_id=trace_id):
         print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}")
-        gr.ChatInterface(chat).launch(inbrowser=True)
+        asyncio.run(main(trace_id))
+        
