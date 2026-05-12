@@ -40,7 +40,7 @@ Output Rules:
     - If it's any of the described types, the response should be TRUE as it is a valid message.
     - If the message isn't any of the described types, then the response should be FALSE as the message is not valid.
     - If the message is not valid, 'message_type' MUST be null.
-    - Finally, write a message to the user about the filtering result. If invalid, ask the user to ask something again.
+    - Finally, write a message to the user about the filtering result. If invalid, ask the user to ask something again, this time related with your profesional life.
 """
 
 

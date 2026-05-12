@@ -3,7 +3,6 @@ from agents import trace, gen_trace_id, Runner
 import gradio as gr
 from dotenv import load_dotenv
 
-from agents_folder.router_agent import router_agent
 from graph import Graph
 
 load_dotenv(override=True)
@@ -20,7 +19,8 @@ class App:
         results = await self.graph.run_superstep(
                 message, history
             )
-        return results.final_output
+
+        return results
     
 async def main(trace_id):
     app = App(trace_id)

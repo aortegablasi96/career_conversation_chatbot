@@ -59,24 +59,25 @@ class Graph:
 
     async def run_superstep(self, message, history):
         """Run one conversation turn: user message -> filter review -> documents lookup -> generate response """
-        """ TO BE DEFINED """
-
+        
         config = {"configurable": {"thread_id": self.trace_id}}
 
         state = {
             "query": message,
             "messages": history,
             "filter_validation": False,
-            "filter_output": None,
+            "filter_classification": None,
             "found_information": False,
             "relevant_documents":[], 
-            "thread_id":self.trace_id            
+            "trace_id":self.trace_id            
         }
 
         result = await self.graph.ainvoke(state, config=config)
-        reply = result["messages"][-1] 
-        
-        return history + [reply]
+
+        # user = {"role": "user", "content": message}
+        reply = result["messages"][-1]
+
+        return reply
 
     def get_nodes_diagram(self):
         """ Create an image of the Graph diagram."""

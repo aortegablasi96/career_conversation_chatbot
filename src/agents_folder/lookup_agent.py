@@ -1,5 +1,6 @@
 from pathlib import Path
-from agents import Agent, function_tool, ModelSettings
+from typing import Optional, Any
+from agents import Agent, AgentOutputSchema, function_tool, ModelSettings
 from dotenv import load_dotenv
 from langchain_cohere import CohereRerank
 from langchain_chroma import Chroma
@@ -62,10 +63,12 @@ def search_knowledge_base(query: str):
 
 INSTRUCTIONS = """You are a look-up agent on behalf of Andreu Ortega. 
 Use the tool to retrieve the relevant content related with the query about Andreu Ortega.
+
+When using the tool, always transform the query into English. But answer to the user in the language of the query.
 """
 
 class SearchOutput  (BaseModel):
-    output: list[Document] = Field(description="List of documents found")
+    output: Optional[list[Any]] = Field(description="List of documents found")
     found_information: bool = Field(description="If information is found or not")
 
 lookup_agent = Agent(
@@ -74,5 +77,5 @@ lookup_agent = Agent(
     model=MODEL,
     tools=[search_knowledge_base],
     model_settings=ModelSettings(tool_choice="required"),
-    output_type=SearchOutput
+    output_type=AgentOutputSchema(SearchOutput,strict_json_schema=False)
 )
