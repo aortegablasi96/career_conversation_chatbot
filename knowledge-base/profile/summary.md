@@ -11,15 +11,7 @@
 
 ### Description:
 
-Global Product Specialist with 4+ years of experience delivering digital and IoT
-enabled SaaS solutions across international markets. PMP certified, with a strong
-technical foundation in software development, data analytics, and cloud platforms.
-Over the last years, I expanded my scope into AI product development, including
-LLM-based applications, Retrieval-Augmented Generation (RAG) systems, and AI
-agents. Proven ability to translate complex technical capabilities into scalable,
-market-driven products by bridging business, engineering, and data teams.
-I am passionate about building intelligent products that drive automation, decision
-making, and operational efficiency.
+Global Product Specialist with 4+ years of experience delivering digital and IoT enabled SaaS solutions across international markets. PMP and PMI-CPMAI certified, with a strong technical foundation in software development, data analytics, and cloud platforms. Over the last years, I expanded my scope into AI product development, including LLM-based applications, Retrieval-Augmented Generation (RAG) systems, and AI agents. Strong leadership and systems thinking skills, with a servant-leader mindset and a structured, data-driven approach to decision-making. Able to bring clarity in uncertain environments, align stakeholders, and drive execution through cross-functional collaboration. Proven ability to translate complex technical capabilities into scalable, market-driven products that improve automation, decision-making, and operational efficiency.
 
 ### Other facts:
 

@@ -1,13 +1,13 @@
 ### Summary of Strengths:
 
-- Wide polivalency in technical and management work experience and knowledge, upskilling easiness (capable of learning new things or adapting to new frameworks easily) and very innovative. I have also worked in a wide range of company frameworks, ranging from small and vertical compamies to very big, global and horizontal companies.
+- I have a strong leadership skill, I lead with a servant-leader mindset, motivating teams, building ownership, and creating a collaborative environment that supports high performance.
 - I bridge business, engineering, and data teams to turn complex technical capabilities (IoT, SaaS, AI) into scalable, market-ready products.
 - I bring structure to ambiguity, using a methodical and delivery-focused approach while staying flexible when priorities and requirements evolve.
-- I lead with a servant-leader mindset, motivating teams, building ownership, and creating a collaborative environment that supports high performance.
 - I combine strategic thinking with execution, quickly understanding the big picture and translating it into actionable roadmaps, priorities, and delivery plans.
 - I make data-driven decisions, validating product direction with facts, customer needs, and measurable outcomes rather than assumptions.
 - I have strong systems thinking skills, allowing me to understand how products, stakeholders, operations, and technology interact within larger ecosystems.
 - I communicate clearly and confidently, enabling strong stakeholder alignment across global environments, vendors, and cross-functional teams.
+- Wide polivalency in technical and management work experience and knowledge, upskilling easiness (capable of learning new things or adapting to new frameworks easily) and very innovative. I have also worked in a wide range of company frameworks, ranging from small and vertical compamies to very big, global and horizontal companies.
 
 ### Summary of Weaknesses:
 

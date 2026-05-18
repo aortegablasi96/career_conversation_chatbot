@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Union, Dict, List, Any
 from agents import Agent, AgentOutputSchema, function_tool, ModelSettings
 from dotenv import load_dotenv
 from langchain_cohere import CohereRerank
@@ -15,8 +15,9 @@ load_dotenv(override=True)
 MODEL = "gpt-4o-mini"
 DB_NAME = str(Path(__file__).parent.parent.parent / "vector_db")
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-RETRIEVAL_K = 10
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+RETRIEVAL_K = 20
+FILTER_K = 10
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever()
@@ -40,7 +41,7 @@ def search_knowledge_base(query: str):
     seen = set()
     combined: list[Document] = []
 
-    # To remove duplicates from the same method
+    # To remove duplicates from the same method 
     for doc in chroma_docs + bm_docs:
         cid = doc.metadata.get("chunk_id") or doc.metadata.get("source")
         if cid not in seen:
@@ -49,7 +50,7 @@ def search_knowledge_base(query: str):
 
     # Reranking section
     reranker = CohereRerank(
-        top_n=RETRIEVAL_K,
+        top_n=FILTER_K,
         model="rerank-english-v3.0",
     )
     
@@ -62,13 +63,23 @@ def search_knowledge_base(query: str):
     return reranked_documents
 
 INSTRUCTIONS = """You are a look-up agent on behalf of Andreu Ortega. 
-Use the tool to retrieve the relevant content related with the query about Andreu Ortega.
+Use the tool to retrieve the relevant documents related with the query about Andreu Ortega.
+You MUST return all the docuemnts as they are, intact. Do not overwrite them.
 
-When using the tool, always transform the query into English. But answer to the user in the language of the query.
+When using the tool, always translate the query into English.
 """
 
-class SearchOutput  (BaseModel):
-    output: Optional[list[Any]] = Field(description="List of documents found")
+class MetadataSchema(BaseModel):
+    doc_type: str
+    source: str
+
+class DocumentSchema(BaseModel):
+    id: str
+    page_content: str
+    metadata: MetadataSchema
+
+class SearchOutput(BaseModel):
+    output: list[DocumentSchema] = Field(description="List of documents found")
     found_information: bool = Field(description="If information is found or not")
 
 lookup_agent = Agent(
@@ -77,5 +88,5 @@ lookup_agent = Agent(
     model=MODEL,
     tools=[search_knowledge_base],
     model_settings=ModelSettings(tool_choice="required"),
-    output_type=AgentOutputSchema(SearchOutput,strict_json_schema=False)
+    output_type=AgentOutputSchema(SearchOutput)
 )

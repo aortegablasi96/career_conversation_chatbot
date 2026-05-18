@@ -19,6 +19,7 @@ There are two types of valid messages:
 
         Treat the "Info" message as being about Andreu Ortega if it asks about:
         - identity (e.g. "who are you?", "tell me about yourself")
+        - soft skills, strengths and weaknesses
         - education (e.g. "what school did you go to?", "what did you study?")
         - work experience, skills, career
         - projects, portfolio, achievements
@@ -31,7 +32,7 @@ There are two types of valid messages:
     "Contact" messages:
         Treat the "Contact" message as:
         - The user wants to be contacted (e.g. "I would like to be contacted", "I want to be contacted", "How can we get in touch?").
-        - The user provides his contact details (name, email, reason).
+        - The user provides his contact details (name, email) or the reason on why he wants to be contacted.
 
 If the user is asking to be contacted, it should be classified as "contact". If the user is asking about your contact details, then should be classified as "info".
 If the user is salutating in the same message that is asking to be contacted, classify it as contact.

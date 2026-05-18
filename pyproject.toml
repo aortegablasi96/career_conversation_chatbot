@@ -6,8 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agents>=1.4.0",
+    "certifi>=2026.2.25",
     "chromadb>=1.5.8",
+    "cryptography>=46.0.7",
+    "fastapi>=0.136.0",
     "gradio>=6.13.0",
+    "hnswlib>=0.8.0",
     "langchain>=1.2.15",
     "langchain-chroma>=1.1.0",
     "langchain-cohere>=0.5.1",
@@ -20,9 +24,13 @@ dependencies = [
     "pandas>=3.0.2",
     "pdfplumber>=0.11.9",
     "plotly>=6.7.0",
+    "pydantic>=2.13.3",
+    "pyopenssl>=26.2.0",
     "pypdf>=6.10.0",
+    "python-dotenv>=1.2.2",
     "rank-bm25>=0.2.2",
     "requests>=2.33.1",
     "streamlit>=1.56.0",
     "umap-learn>=0.5.12",
+    "uvicorn>=0.46.0",
 ]

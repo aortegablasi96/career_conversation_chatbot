@@ -12,7 +12,7 @@ from nodes import Nodes
 load_dotenv(override=True)
 
 class Graph:
-    def __init__(self,trace_id) -> None:
+    def __init__(self,trace_id=None) -> None:
         self.trace_id = trace_id
         self.memory = MemorySaver()     
         self.nodes = Nodes()
@@ -60,19 +60,33 @@ class Graph:
     async def run_superstep(self, message, history):
         """Run one conversation turn: user message -> filter review -> documents lookup -> generate response """
         
-        config = {"configurable": {"thread_id": self.trace_id}}
+        if self.trace_id:
+            config = {"configurable": {"thread_id": self.trace_id}}
 
-        state = {
-            "query": message,
-            "messages": history,
-            "filter_validation": False,
-            "filter_classification": None,
-            "found_information": False,
-            "relevant_documents":[], 
-            "trace_id":self.trace_id            
-        }
+            state = {
+                "query": message,
+                "messages": history,
+                "filter_validation": False,
+                "filter_classification": None,
+                "found_information": False,
+                "relevant_documents":[], 
+                "trace_id":self.trace_id            
+            }
 
-        result = await self.graph.ainvoke(state, config=config)
+            result = await self.graph.ainvoke(state, config=config)
+        
+        else:
+            state = {
+                "query": message,
+                "messages": history,
+                "filter_validation": False,
+                "filter_classification": None,
+                "found_information": False,
+                "relevant_documents":[], 
+                "trace_id":None,            
+            }
+
+            result = await self.graph.ainvoke(state)
 
         # user = {"role": "user", "content": message}
         reply = result["messages"][-1]

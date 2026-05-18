@@ -10,7 +10,7 @@ Project Management Institution (PMI)
 
 ### Date of emission:
 
-Ongoing (to be finished in June 2026)
+May 2026
 
 ### Description:
 

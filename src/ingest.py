@@ -18,7 +18,7 @@ KNOWLEDGE_BASE = str(Path(__file__).parent.parent / "knowledge-base")
 
 load_dotenv(override=True)
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
 
 def fetch_documents():
@@ -61,6 +61,6 @@ def create_embeddings(chunks):
 
 if __name__ == "__main__":
     documents = fetch_documents()
-    chunks = create_chunks(documents)
-    vectorstore = create_embeddings(chunks)    
+    # chunks = create_chunks(documents) for now I do not want chunks
+    vectorstore = create_embeddings(documents)    
     print("Ingestion complete")

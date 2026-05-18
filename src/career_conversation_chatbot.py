@@ -7,12 +7,15 @@ from graph import Graph
 
 load_dotenv(override=True)
 
-class App:
-    def __init__(self,trace_id):
+class ChatbotService:
+    def __init__(self, trace_id: str):
         self.graph = Graph(trace_id)
+        self.initialized = False
 
     async def setup(self):
-        await self.graph.setup()
+        if not self.initialized:
+            await self.graph.setup()
+            self.initialized = True
           
     async def chat(self, message, history):   
         """ Handle user message submission. """
@@ -23,9 +26,10 @@ class App:
         return results
     
 async def main(trace_id):
-    app = App(trace_id)
+    app = ChatbotService(trace_id)
     await app.setup()
     gr.ChatInterface(app.chat).launch(inbrowser=True)
+
 
 if __name__ == "__main__":
 
