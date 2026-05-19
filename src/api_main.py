@@ -47,6 +47,7 @@ async def telegram_webhook(request: Request):
     data = await request.json()
 
     message = data.get("message", {})
+    language = data.get("from",{}).get("language_code",{})
     chat = message.get("chat", {})
     chat_id = str(chat.get("id"))
     text = message.get("text")
@@ -58,8 +59,8 @@ async def telegram_webhook(request: Request):
 
     if text.strip().lower() == "/start":
         intro = (
-            f"Who are you?"
-            f"Please, answer me in the following language: {data["message"]["from"]["language_code"]}"
+            f"Can you introduce yourself to me?"
+            f"Please, answer me in the following language: {language}"
         )
         reply = await bot.chat(intro, history)
 
