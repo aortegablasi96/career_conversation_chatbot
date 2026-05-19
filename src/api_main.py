@@ -1,4 +1,4 @@
-processed_updates = set()import uuid
+import uuid
 import asyncio
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
@@ -80,15 +80,13 @@ async def process_telegram_update(data: dict):
 
         await send_telegram_message(chat_id, reply["content"])
 
-        return {"ok": True}
+        return
     
-    else:
+    reply = await bot.chat(text, history)
 
-        reply = await bot.chat(text, history)
+    await send_telegram_message(chat_id, reply["content"])
 
-        await send_telegram_message(chat_id, reply["content"])
-
-        return {"ok": True}
+    return {"ok": True}
 
 
 async def send_telegram_message(chat_id: str, text: str):
