@@ -57,6 +57,8 @@ async def telegram_webhook(request: Request):
 
     history = []  # later you can persist this per user
 
+    bot = await get_or_create_session(chat_id)
+
     if text.strip().lower() == "/start":
         intro = (
             f"Can you introduce yourself to me?"
@@ -69,8 +71,6 @@ async def telegram_webhook(request: Request):
         return {"ok": True}
     
     else:
-
-        bot = await get_or_create_session(chat_id)
 
         reply = await bot.chat(text, history)
 
