@@ -1,6 +1,6 @@
-import uuid
+processed_updates = set()import uuid
 import asyncio
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import httpx
 import os
@@ -8,6 +8,7 @@ import os
 from career_conversation_chatbot import ChatbotService
 
 app = FastAPI()
+processed_updates = set()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -43,8 +44,19 @@ async def chat(req: ChatRequest):
     }
 
 @app.post("/telegram/webhook")
-async def telegram_webhook(request: Request):
+async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
     data = await request.json()
+
+    background_tasks.add_task(process_telegram_update, data)
+
+    return {"ok": True}
+
+async def process_telegram_update(data: dict):
+
+    update_id = data.get("update_id")
+    if update_id in processed_updates:
+        return
+    processed_updates.add(update_id)
 
     message = data.get("message", {})
     language = message.get("from", {}).get("language_code", "en")
