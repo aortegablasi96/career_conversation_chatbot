@@ -47,7 +47,7 @@ async def telegram_webhook(request: Request):
     data = await request.json()
 
     message = data.get("message", {})
-    language = data.get("from",{}).get("language_code",{})
+    language = message.get("from",{}).get("language_code",{})
     chat = message.get("chat", {})
     chat_id = str(chat.get("id"))
     text = message.get("text")
