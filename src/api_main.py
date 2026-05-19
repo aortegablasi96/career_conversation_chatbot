@@ -39,7 +39,7 @@ async def chat(req: ChatRequest):
 
     return {
         "user_id": req.user_id,
-        "reply": reply
+        "reply": reply["content"]
     }
 
 @app.post("/telegram/webhook")
@@ -60,7 +60,7 @@ async def telegram_webhook(request: Request):
 
     reply = await bot.chat(text, history)
 
-    await send_telegram_message(chat_id, reply)
+    await send_telegram_message(chat_id, reply["content"])
 
     return {"ok": True}
 
