@@ -54,15 +54,28 @@ async def telegram_webhook(request: Request):
     if not chat_id or not text:
         return {"ok": True}
 
-    bot = await get_or_create_session(chat_id)
-
     history = []  # later you can persist this per user
 
-    reply = await bot.chat(text, history)
+    if text.strip().lower() == "/start":
+        intro = (
+            f"Who are you?"
+            f"Please, answer me in the following language: {data["message"]["from"]["language_code"]}"
+        )
+        reply = await bot.chat(intro, history)
 
-    await send_telegram_message(chat_id, reply["content"])
+        await send_telegram_message(chat_id, reply["content"])
 
-    return {"ok": True}
+        return {"ok": True}
+    
+    else:
+
+        bot = await get_or_create_session(chat_id)
+
+        reply = await bot.chat(text, history)
+
+        await send_telegram_message(chat_id, reply["content"])
+
+        return {"ok": True}
 
 
 async def send_telegram_message(chat_id: str, text: str):
