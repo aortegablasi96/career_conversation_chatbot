@@ -10,8 +10,8 @@ from career_conversation_chatbot import ChatbotService
 app = FastAPI()
 
 processed_updates = set()
-chat_histories = {}  # {chat_id: [(user_msg, bot_msg), ...]}
-MAX_TURNS = 10
+chat_histories: dict[str, list[dict]] = {}
+MAX_MESSAGES = 20
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -70,7 +70,7 @@ async def process_telegram_update(data: dict):
     if not chat_id or not text:
         return {"ok": True}
 
-    history = []
+    history = chat_histories.get(chat_id, [])
 
     bot = await get_or_create_session(chat_id)
 
@@ -84,12 +84,21 @@ async def process_telegram_update(data: dict):
         await send_telegram_message(chat_id, reply["content"])
 
         return
-
-    history.extend(chat_histories.get(chat_id, []))
     
     reply = await bot.chat(text, history)
 
-    chat_histories[chat_id] = (history + [(text, reply["content"])])[-MAX_TURNS:]
+    history.append(
+        {
+            "role": "user",
+            "content": text
+        },
+        {
+            "role": "assistant",
+            "content": reply["content"]
+        }
+    )
+            
+    chat_histories[chat_id] = history[-MAX_MESSAGES:]
 
     await send_telegram_message(chat_id, reply["content"])
 
