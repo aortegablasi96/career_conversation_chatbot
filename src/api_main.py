@@ -85,7 +85,7 @@ async def process_telegram_update(data: dict):
     
     reply = await bot.chat(text, history)
 
-    history.append(
+    history.extend([
         {
             "role": "user",
             "content": text
@@ -94,7 +94,7 @@ async def process_telegram_update(data: dict):
             "role": "assistant",
             "content": reply["content"]
         }
-    )
+    ])
             
     chat_histories[chat_id] = history[-MAX_MESSAGES:]
 
