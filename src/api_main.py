@@ -6,6 +6,7 @@ import httpx
 import os
 
 from career_conversation_chatbot import ChatbotService
+from resources.start_messages import START_MESSAGES
 
 app = FastAPI()
 
@@ -62,7 +63,7 @@ async def process_telegram_update(data: dict):
     processed_updates.add(update_id)
 
     message = data.get("message", {})
-    language = message.get("from", {}).get("language_code", "en")
+    language_code = message.get("from", {}).get("language_code", "en")
     chat = message.get("chat", {})
     chat_id = str(chat.get("id"))
     text = message.get("text")
@@ -75,13 +76,10 @@ async def process_telegram_update(data: dict):
     bot = await get_or_create_session(chat_id)
 
     if text.strip().lower() == "/start":
-        intro = (
-            f"Can you shortly introduce yourself to me? What can I ask to you?"
-            f"Please, answer me in the following language: {language}"
-        )
-        reply = await bot.chat(intro,history)
+        lang = language_code.lower().split("-")[0]
+        start_text = START_MESSAGES.get(lang, START_MESSAGES["en"])
 
-        await send_telegram_message(chat_id, reply["content"])
+        await send_telegram_message(chat_id, start_text)
 
         return
     
