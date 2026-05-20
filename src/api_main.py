@@ -8,7 +8,10 @@ import os
 from career_conversation_chatbot import ChatbotService
 
 app = FastAPI()
+
 processed_updates = set()
+chat_histories = {}  # {chat_id: [(user_msg, bot_msg), ...]}
+MAX_TURNS = 10
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -67,7 +70,7 @@ async def process_telegram_update(data: dict):
     if not chat_id or not text:
         return {"ok": True}
 
-    history = []  # later you can persist this per user
+    history = []
 
     bot = await get_or_create_session(chat_id)
 
@@ -76,13 +79,17 @@ async def process_telegram_update(data: dict):
             f"Can you shortly introduce yourself to me? What can I ask to you?"
             f"Please, answer me in the following language: {language}"
         )
-        reply = await bot.chat(intro, history)
+        reply = await bot.chat(intro,)
 
         await send_telegram_message(chat_id, reply["content"])
 
         return
+
+    history.extend(chat_histories.get(chat_id, []))
     
     reply = await bot.chat(text, history)
+
+    chat_histories[chat_id] = (history + [(text, reply["content"])])[-MAX_TURNS:]
 
     await send_telegram_message(chat_id, reply["content"])
 
