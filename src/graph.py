@@ -70,6 +70,7 @@ class Graph:
                 "filter_classification": None,
                 "found_information": False,
                 "relevant_documents":[], 
+                "translated_query": "",
                 "trace_id":self.trace_id            
             }
 
@@ -83,7 +84,8 @@ class Graph:
                 "filter_classification": None,
                 "found_information": False,
                 "relevant_documents":[], 
-                "trace_id":None,            
+                "translated_query": "",
+                "trace_id":None 
             }
 
             result = await self.graph.ainvoke(state)

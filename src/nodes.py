@@ -4,7 +4,7 @@ from agents import RunConfig, Runner
 
 from models.state import State
 from agents_folder.filter_agent import filter_agent
-from agents_folder.lookup_agent import lookup_agent
+from agents_folder.lookup_agent import lookup_agent, search_knowledge_base_impl
 from agents_folder.conversation_agent import conversation_agent
 
 class Nodes:
@@ -22,6 +22,7 @@ class Nodes:
 
         state.filter_validation = result.final_output.valid_response
         state.filter_classification = result.final_output.message_type
+        state.translated_query = result.final_output.translated_query
 
         if not state.filter_validation:
             # state.messages.append({"role":"assistant","content":"Could not find information about this query. Please ask something again."})
@@ -30,21 +31,20 @@ class Nodes:
         return state
 
     async def lookup_node(self, state: State) -> State:
-        """ To be defined """
+        """ Query in the ChromaDB to obtain the relevant documents """
 
-        lookup_output = await Runner.run(
-            lookup_agent,
-            state.query
-        )
+        documents = search_knowledge_base_impl(state.translated_query)
 
-        if lookup_output.final_output.output:
-            state.relevant_documents.extend(lookup_output.final_output.output)
-        state.found_information = lookup_output.final_output.found_information
+        if documents:
+            state.relevant_documents.extend(documents)
+            state.found_information = True
+        else:
+            state.found_information = False
         
         return state
 
     async def conversation_node(self, state: State) -> State:  
-        """ To be defined """ 
+        """ Use the information provided in the steps before to answer the user's query """ 
 
         result = await Runner.run(
             conversation_agent,

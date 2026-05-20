@@ -34,6 +34,10 @@ bm25 = BM25Retriever.from_documents(documents)
 @function_tool
 def search_knowledge_base(query: str):
     """ Retrieve relevant context documents for a question """
+    return search_knowledge_base_impl(query)
+
+def search_knowledge_base_impl(query: str):
+    """ Retrieve relevant context documents for a question """
 
     chroma_docs = retriever.invoke(query, k=RETRIEVAL_K)
     bm_docs = bm25.invoke(query,k=RETRIEVAL_K)

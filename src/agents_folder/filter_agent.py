@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-4.1-nano"
 
 INSTRUCTIONS = f"""You are a filter agent representing Andreu Ortega.
 
@@ -42,6 +42,7 @@ Output Rules:
     - If the message isn't any of the described types, then the response should be FALSE as the message is not valid.
     - If the message is not valid, 'message_type' MUST be null.
     - Finally, write a message to the user about the filtering result. If invalid, ask the user to ask something again, this time related with your profesional life.
+    - Translate the query into english.
 """
 
 
@@ -49,6 +50,7 @@ class FilteredResponse(BaseModel):
     valid_response: bool = Field(description="A boolean value indicating if the query is related with Andreu or not")
     message_type: Optional[Literal["info","contact"]] = Field(description="Indicates if the message's purpose is to ask for information or to get contacted")
     message_for_user: str = Field(description="Message for the user indicating if query is valid or not, which would require to ask something again")
+    translated_query: str = Field(description="English-translated query")
 
 filter_agent = Agent(
     name="FilterAgent",
