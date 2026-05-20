@@ -16,7 +16,7 @@ MODEL = "gpt-4o-mini"
 DB_NAME = str(Path(__file__).parent.parent.parent / "vector_db")
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-RETRIEVAL_K = 20
+RETRIEVAL_K = 10
 FILTER_K = 10
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
