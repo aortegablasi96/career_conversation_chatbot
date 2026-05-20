@@ -27,13 +27,11 @@ class Graph:
 
         # Add nodes
         graph_builder.add_node("filter", self.nodes.filter_node)
-        graph_builder.add_node("lookup",self.nodes.lookup_node)
         graph_builder.add_node("conversation", self.nodes.conversation_node)
 
         # Add edges
         graph_builder.add_edge(START,"filter")
-        graph_builder.add_conditional_edges("filter",self.filter_router, {"lookup":"lookup","conversation":"conversation","END":END})
-        graph_builder.add_conditional_edges("lookup",self.lookup_router, {"conversation":"conversation","END":END})
+        graph_builder.add_conditional_edges("filter",self.filter_router, {"conversation":"conversation","END":END})
         graph_builder.add_edge("conversation",END)
 
         # Compile the graph
@@ -44,52 +42,26 @@ class Graph:
 
         if not state.filter_validation:
             return "END"
-        elif state.filter_classification == "info":
-            return "lookup"
-        elif state.filter_classification == "contact":
+        elif state.filter_classification == "info" or state.filter_classification == "contact":
             return "conversation"
-
-    def lookup_router(self, state:State) -> str:
-        """ To be defined """
-
-        if state.found_information:
-            return "conversation"
-        else:
-            return "END"
 
     async def run_superstep(self, message, history):
         """Run one conversation turn: user message -> filter review -> documents lookup -> generate response """
         
-        if self.trace_id:
-            config = {"configurable": {"thread_id": self.trace_id}}
+        config = {"configurable": {"thread_id": self.trace_id}}
 
-            state = {
-                "query": message,
-                "messages": history,
-                "filter_validation": False,
-                "filter_classification": None,
-                "found_information": False,
-                "relevant_documents":[], 
-                "translated_query": "",
-                "trace_id":self.trace_id            
-            }
+        state = {
+            "query": message,
+            "messages": history,
+            "filter_validation": False,
+            "filter_classification": None,
+            "relevant_documents":[], 
+            "translated_query": "",
+            "trace_id":self.trace_id            
+        }
 
-            result = await self.graph.ainvoke(state, config=config)
-        
-        else:
-            state = {
-                "query": message,
-                "messages": history,
-                "filter_validation": False,
-                "filter_classification": None,
-                "found_information": False,
-                "relevant_documents":[], 
-                "translated_query": "",
-                "trace_id":None 
-            }
-
-            result = await self.graph.ainvoke(state)
-
+        result = await self.graph.ainvoke(state, config=config)
+    
         # user = {"role": "user", "content": message}
         reply = result["messages"][-1]
 

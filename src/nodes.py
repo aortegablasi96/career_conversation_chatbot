@@ -17,7 +17,11 @@ class Nodes:
 
         result = await Runner.run(
             filter_agent,
-            state.query
+            input=f"""
+            User query: {state.query}
+            
+            History of messages: {state.messages}
+            """
         )
 
         state.filter_validation = result.final_output.valid_response
@@ -30,21 +34,14 @@ class Nodes:
 
         return state
 
-    async def lookup_node(self, state: State) -> State:
-        """ Query in the ChromaDB to obtain the relevant documents """
-
-        documents = search_knowledge_base_impl(state.translated_query)
-
-        if documents:
-            state.relevant_documents.extend(documents)
-            state.found_information = True
-        else:
-            state.found_information = False
-        
-        return state
-
     async def conversation_node(self, state: State) -> State:  
         """ Use the information provided in the steps before to answer the user's query """ 
+
+        if state.filter_classification == "info":
+            documents = search_knowledge_base_impl(state.translated_query)
+
+            if documents:
+                state.relevant_documents.extend(documents)
 
         result = await Runner.run(
             conversation_agent,

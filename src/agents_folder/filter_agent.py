@@ -27,6 +27,8 @@ There are two types of valid messages:
         - background, biography, origin, location
         - your contact details (e.g. "which are your contact details", "can share your contact details", "can you give to me your contact details")
 
+        The user can also ask further information about the courses or trainings you did in order to further uncerstand your background.
+
         The user can also salute you (e.g. "hello", "hi", "good morning", "good afternoon", "good evening", "good night").
 
     "Contact" messages:
@@ -41,7 +43,7 @@ Output Rules:
     - If it's any of the described types, the response should be TRUE as it is a valid message.
     - If the message isn't any of the described types, then the response should be FALSE as the message is not valid.
     - If the message is not valid, 'message_type' MUST be null.
-    - Finally, write a message to the user about the filtering result. If invalid, ask the user to ask something again, this time related with your profesional life.
+    - Finally, write a message to the user about the filtering result. If invalid, ask the user to ask something again, this time related with your profesional life (always answer in the user's language).
     - Translate the query into english.
 """
 

@@ -8,7 +8,6 @@ class State(BaseModel):
     messages: list[dict[str, Any]] = Field(description="History of messages")
     filter_validation: bool = Field(description="Output of the filter step")
     filter_classification: Optional[Literal["info","contact"]] = Field(description="Filter classification output")
-    found_information: bool = Field(desciption="Database contains information about the query")
     relevant_documents: list[Any] = Field(description="List of documents")
     translated_query: str = Field(description="English-translated query")
     trace_id: str = Field(description="Trace ID")
