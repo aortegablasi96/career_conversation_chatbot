@@ -79,7 +79,7 @@ async def process_telegram_update(data: dict):
             f"Can you shortly introduce yourself to me? What can I ask to you?"
             f"Please, answer me in the following language: {language}"
         )
-        reply = await bot.chat(intro,)
+        reply = await bot.chat(intro,history)
 
         await send_telegram_message(chat_id, reply["content"])
 
