@@ -1,5 +1,5 @@
 import uuid
-import asyncio
+import traceback
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import httpx
@@ -56,50 +56,55 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
     return {"ok": True}
 
 async def process_telegram_update(data: dict):
-    update_id = data.get("update_id")
-    if update_id in processed_updates:
-        return
-    processed_updates.add(update_id)
+    try:
+        update_id = data.get("update_id")
+        if update_id in processed_updates:
+            return
+        processed_updates.add(update_id)
 
-    message = data.get("message", {})
-    language_code = message.get("from", {}).get("language_code", "en")
-    chat = message.get("chat", {})
-    chat_id = str(chat.get("id"))
-    text = message.get("text")
+        message = data.get("message", {})
+        language_code = message.get("from", {}).get("language_code", "en")
+        chat = message.get("chat", {})
+        chat_id = str(chat.get("id"))
+        text = message.get("text")
 
-    if not chat_id or not text:
+        if not chat_id or not text:
+            return {"ok": True}
+
+        history = chat_histories.get(chat_id, [])
+
+        bot = await get_or_create_session(chat_id)
+
+        if text.strip().lower() == "/start":
+            lang = language_code.lower().split("-")[0]
+            start_text = START_MESSAGES.get(lang, START_MESSAGES["en"])
+
+            await send_telegram_message(chat_id, start_text)
+
+            return
+        
+        reply = await bot.chat(text, history)
+
+        history.extend([
+            {
+                "role": "user",
+                "content": text
+            },
+            {
+                "role": "assistant",
+                "content": reply["content"]
+            }
+        ])
+                
+        chat_histories[chat_id] = history[-MAX_MESSAGES:]
+
+        await send_telegram_message(chat_id, reply["content"])
+
         return {"ok": True}
+    except Exception as e:
+        print("TELEGRAM ERROR:", e)
+        traceback.print_exc()
 
-    history = chat_histories.get(chat_id, [])
-
-    bot = await get_or_create_session(chat_id)
-
-    if text.strip().lower() == "/start":
-        lang = language_code.lower().split("-")[0]
-        start_text = START_MESSAGES.get(lang, START_MESSAGES["en"])
-
-        await send_telegram_message(chat_id, start_text)
-
-        return
-    
-    reply = await bot.chat(text, history)
-
-    history.extend([
-        {
-            "role": "user",
-            "content": text
-        },
-        {
-            "role": "assistant",
-            "content": reply["content"]
-        }
-    ])
-            
-    chat_histories[chat_id] = history[-MAX_MESSAGES:]
-
-    await send_telegram_message(chat_id, reply["content"])
-
-    return {"ok": True}
 
 
 async def send_telegram_message(chat_id: str, text: str):
