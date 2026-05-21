@@ -56,7 +56,6 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
     return {"ok": True}
 
 async def process_telegram_update(data: dict):
-    try:
     update_id = data.get("update_id")
     if update_id in processed_updates:
         return
