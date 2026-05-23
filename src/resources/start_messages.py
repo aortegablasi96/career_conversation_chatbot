@@ -19,6 +19,17 @@ START_MESSAGES = {
         "• ¿Qué roles encajan con su experiencia?"
     ),
 
+    "ca": (
+        "Hola! 👋 Sóc l’assistent professional amb IA d’Andreu Ortega.\n\n"
+        "Puc respondre preguntes sobre l’experiència, les habilitats, "
+        "els projectes i la formació d’Andreu.\n\n"
+        "Prova preguntes com:\n"
+        "• Pots resumir el perfil d’Andreu?\n"
+        "• En quins projectes ha treballat?\n"
+        "• Quines són les seves habilitats més fortes?\n"
+        "• Quins rols encaixen amb la seva experiència?"
+    ),
+
     "fr": (
         "Bonjour ! 👋 Je suis l’assistant de carrière IA d’Andreu Ortega.\n\n"
         "Je peux répondre à des questions sur le parcours professionnel, l’expérience, les projets, les compétences et la formation d’Andreu.\n\n"

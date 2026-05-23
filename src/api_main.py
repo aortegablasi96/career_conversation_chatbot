@@ -106,7 +106,6 @@ async def process_telegram_update(data: dict):
         traceback.print_exc()
 
 
-
 async def send_telegram_message(chat_id: str, text: str):
     async with httpx.AsyncClient() as client:
         await client.post(
