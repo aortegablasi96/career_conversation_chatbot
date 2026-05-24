@@ -3,7 +3,7 @@ from agents import trace, gen_trace_id, Runner
 import gradio as gr
 from dotenv import load_dotenv
 
-from graph.graph import Graph
+from backend.graph.graph import Graph
 
 load_dotenv(override=True)
 

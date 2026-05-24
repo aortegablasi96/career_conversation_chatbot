@@ -6,8 +6,8 @@ from pydantic import BaseModel
 import httpx
 import os
 
-from app.career_conversation_chatbot import ChatbotService
-from resources.start_messages import START_MESSAGES
+from backend.app.career_conversation_chatbot import ChatbotService
+from backend.resources.start_messages import START_MESSAGES
 
 app = FastAPI()
 
