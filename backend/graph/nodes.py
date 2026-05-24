@@ -2,12 +2,12 @@ from langchain_core.messages import SystemMessage, AIMessage
 from typing import Any, Dict
 from agents import RunConfig, Runner
 
-from models.state import State
-from resources.invalid_messages import INVALID_MESSAGES
-from agents_folder.filter_agent import filter_agent
-from agents_folder.contact_agent import contact_agent
-from agents_folder.query_normalizer_agent import query_normalizer_agent
-from agents_folder.conversation_agent import conversation_agent, format_documents, search_knowledge_base
+from backend.models.state import State
+from backend.resources.invalid_messages import INVALID_MESSAGES
+from backend.agents_folder.filter_agent import filter_agent
+from backend.agents_folder.contact_agent import contact_agent
+from backend.agents_folder.query_normalizer_agent import query_normalizer_agent
+from backend.agents_folder.conversation_agent import conversation_agent, format_documents, search_knowledge_base
 
 class Nodes:
     def __init__(self):
