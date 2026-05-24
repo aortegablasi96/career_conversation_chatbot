@@ -92,13 +92,13 @@ async def process_telegram_update(data: dict):
             },
             {
                 "role": "assistant",
-                "content": reply["content"]
+                "content": reply
             }
         ])
                 
         chat_histories[chat_id] = history[-MAX_MESSAGES:]
 
-        await send_telegram_message(chat_id, reply["content"])
+        await send_telegram_message(chat_id, reply)
 
         return {"ok": True}
     except Exception as e:
