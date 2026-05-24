@@ -7,7 +7,7 @@ import re
 
 import traceback
 
-DB_NAME = str(Path(__file__).parent.parent / "vector_db")
+DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
 
 st.set_page_config(page_title="Chroma DB Explorer", layout="wide")
 

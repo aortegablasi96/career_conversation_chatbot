@@ -17,7 +17,7 @@ from backend.agents_folder.query_normalizer_agent import QueryNormalizedOutput
 
 load_dotenv(override=True)
 
-DB_NAME = str(Path(__file__).parent.parent.parent / "vector_db")
+DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 RETRIEVAL_K = 10
