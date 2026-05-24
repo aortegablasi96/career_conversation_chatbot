@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 
 from models.state import State
-from nodes import Nodes
+from graph.nodes import Nodes
 
 load_dotenv(override=True)
 

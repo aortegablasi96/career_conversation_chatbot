@@ -1,14 +1,27 @@
 import uuid
 import traceback
 from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import os
 
-from career_conversation_chatbot import ChatbotService
+from app.career_conversation_chatbot import ChatbotService
 from resources.start_messages import START_MESSAGES
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://career-conversation-chatbot.onrender.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 processed_updates = set()
 chat_histories: dict[str, list[dict]] = {}
