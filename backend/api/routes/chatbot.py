@@ -26,7 +26,6 @@ async def chat(req: ChatRequest):
 
     bot = await get_or_create_session(req.user_id)
 
-    # history is empty for now (we improve later)
     history = []
 
     reply = await bot.chat(req.message, history)
