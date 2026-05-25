@@ -2,7 +2,7 @@ import uuid
 from pydantic import BaseModel
 from fastapi import APIRouter
 
-from backend.app.career_conversation_chatbot import ChatbotService
+from app.career_conversation_chatbot import ChatbotService
 
 router = APIRouter()
 
