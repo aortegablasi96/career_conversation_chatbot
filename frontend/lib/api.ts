@@ -2,6 +2,7 @@ export async function sendMessage(
     message: string,
     threadId: string
   ) {
+    
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/chat`,
       {
@@ -11,7 +12,7 @@ export async function sendMessage(
         },
         body: JSON.stringify({
           message,
-          thread_id: threadId,
+          user_id: threadId,
         }),
       }
     );
