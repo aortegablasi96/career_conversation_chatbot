@@ -38,7 +38,7 @@ export default function ChatWindow() {
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: response.response,
+        content: response.reply,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
