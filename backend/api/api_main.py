@@ -11,6 +11,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://career-conversation-chatbot.onrender.com"
+        "https://career-conversation-chatbot.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
