@@ -6,8 +6,8 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
-from backend.models.state import State
-from backend.graph.nodes import Nodes
+from models.state import State
+from graph.nodes import Nodes
 
 load_dotenv(override=True)
 

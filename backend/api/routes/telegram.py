@@ -4,8 +4,8 @@ import uuid
 import httpx
 from fastapi import APIRouter, Request, BackgroundTasks
 
-from backend.resources.start_messages import START_MESSAGES
-from backend.app.career_conversation_chatbot import ChatbotService
+from resources.start_messages import START_MESSAGES
+from app.career_conversation_chatbot import ChatbotService
 
 router = APIRouter(prefix="/telegram")
 

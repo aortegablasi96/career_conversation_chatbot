@@ -13,7 +13,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from pydantic import BaseModel, Field
 
-from backend.agents_folder.query_normalizer_agent import QueryNormalizedOutput
+from agents_folder.query_normalizer_agent import QueryNormalizedOutput
 
 load_dotenv(override=True)
 

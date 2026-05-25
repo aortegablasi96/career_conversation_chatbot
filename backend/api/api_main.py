@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routes.chatbot import router as chatbot_router
-from backend.api.routes.telegram import router as telegram_router
+from api.routes.chatbot import router as chatbot_router
+from api.routes.telegram import router as telegram_router
 
 app = FastAPI()
 
