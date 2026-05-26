@@ -207,7 +207,36 @@ export default function ChatWindow() {
                           : "bg-white/10 border border-white/10 backdrop-blur-md text-neutral-100"
                         }
                       `}>
-                        <div className="prose prose-invert max-w-none prose-p:leading-relaxed">
+                        <div className="
+                          prose prose-invert max-w-none
+
+                          /* paragraphs */
+                          prose-p:my-1
+                          prose-p:leading-snug
+
+                          /* lists */
+                          prose-ul:my-1
+                          prose-ol:my-1
+                          prose-li:my-0.5
+
+                          /* headings */
+                          prose-h1:mb-2
+                          prose-h2:mb-2
+                          prose-h3:mb-1
+                          prose-h1:mt-3
+                          prose-h2:mt-3
+                          prose-h3:mt-2
+
+                          /* code blocks */
+                          prose-pre:my-2
+                          prose-pre:p-3
+
+                          /* blockquotes */
+                          prose-blockquote:my-2
+
+                          /* overall density */
+                          leading-snug
+                        ">
                           <ReactMarkdown>
                             {message.content}
                           </ReactMarkdown>
