@@ -139,192 +139,110 @@ export default function ChatWindow() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+          <div className="relative flex-1 min-h-0">
 
-            {/* Empty State */}
-            {messages.length === 0 && !loading && (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
+            {/* Top fade shadow */}
+            <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10 bg-gradient-to-b from-black/80 to-transparent" />
 
-                <div
-                  className="
-                    w-24
-                    h-24
-                    rounded-3xl
-                    bg-gradient-to-br
-                    from-blue-500
-                    to-purple-500
-                    flex
-                    items-center
-                    justify-center
-                    text-3xl
-                    font-bold
-                    mb-6
-                    shadow-2xl
-                  "
-                >
-                  AI
+            {/* Scroll area */}
+            <div className="h-full overflow-y-auto no-scrollbar px-4 md:px-8 py-6 space-y-6">
+              
+              {/* Empty State */}
+              {messages.length === 0 && !loading && (
+                <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                  <div className="
+                    w-24 h-24 rounded-3xl
+                    bg-gradient-to-br from-blue-500 to-purple-500
+                    flex items-center justify-center
+                    text-3xl font-bold mb-6 shadow-2xl
+                  ">
+                    AI
+                  </div>
+
+                  <h2 className="text-4xl font-bold tracking-tight mb-4">
+                    Welcome back
+                  </h2>
+
+                  <p className="max-w-xl text-neutral-400 leading-relaxed">
+                    Ask anything about Andreu Ortega’s projects, frontend engineering,
+                    AI integrations, certifications, or professional experience.
+                  </p>
                 </div>
+              )}
 
-                <h2 className="text-4xl font-bold tracking-tight mb-4">
-                  Welcome back
-                </h2>
-
-                <p className="max-w-xl text-neutral-400 leading-relaxed">
-                  Ask anything about Andreu Ortega’s
-                  projects, frontend engineering,
-                  AI integrations, certifications,
-                  or professional experience.
-                </p>
-              </div>
-            )}
-
-            <AnimatePresence>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{
-                    opacity: 0,
-                    y: 20,
-                    scale: 0.98,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                  }}
-                  transition={{
-                    duration: 0.25,
-                  }}
-                  className={`flex ${
-                    message.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`
-                      flex
-                      gap-3
-                      max-w-[85%]
-                      ${
-                        message.role === "user"
-                          ? "flex-row-reverse"
-                          : ""
-                      }
-                    `}
+              <AnimatePresence>
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className={`flex ${
+                      message.role === "user" ? "justify-end" : "justify-start"
+                    }`}
                   >
+                    <div className={`flex gap-3 max-w-[85%] ${
+                      message.role === "user" ? "flex-row-reverse" : ""
+                    }`}>
 
-                    {/* Avatar */}
-                    <div
-                      className={`
-                        w-10
-                        h-10
-                        rounded-2xl
-                        flex
-                        items-center
-                        justify-center
-                        text-sm
-                        font-semibold
-                        shrink-0
-                        shadow-lg
-                        ${
-                          message.role === "user"
-                            ? "bg-white text-black"
-                            : "bg-gradient-to-br from-blue-500 to-purple-500"
+                      {/* Avatar */}
+                      <div className={`
+                        w-10 h-10 rounded-2xl flex items-center justify-center
+                        text-sm font-semibold shrink-0 shadow-lg
+                        ${message.role === "user"
+                          ? "bg-white text-black"
+                          : "bg-gradient-to-br from-blue-500 to-purple-500"
                         }
-                      `}
-                    >
-                      {message.role === "user"
-                        ? "Y"
-                        : "AI"}
-                    </div>
-
-                    {/* Bubble */}
-                    <div
-                      className={`
-                        rounded-3xl
-                        px-5
-                        py-4
-                        shadow-xl
-                        whitespace-pre-wrap
-                        transition-all
-                        duration-300
-                        leading-relaxed
-                        ${
-                          message.role === "user"
-                            ? `
-                              bg-gradient-to-r
-                              from-blue-500
-                              to-cyan-400
-                              text-white
-                            `
-                            : `
-                              bg-white/10
-                              border
-                              border-white/10
-                              backdrop-blur-md
-                              text-neutral-100
-                            `
-                        }
-                      `}
-                    >
-                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed">
-                        <ReactMarkdown>
-                          {message.content}
-                        </ReactMarkdown>
+                      `}>
+                        {message.role === "user" ? "Y" : "AI"}
                       </div>
+
+                      {/* Bubble */}
+                      <div className={`
+                        rounded-3xl px-5 py-4 shadow-xl
+                        whitespace-pre-wrap transition-all duration-300
+                        leading-relaxed
+                        ${message.role === "user"
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white"
+                          : "bg-white/10 border border-white/10 backdrop-blur-md text-neutral-100"
+                        }
+                      `}>
+                        <div className="prose prose-invert max-w-none prose-p:leading-relaxed">
+                          <ReactMarkdown>
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-sm font-semibold">
+                    AI
+                  </div>
+
+                  <div className="bg-white/10 border border-white/10 rounded-3xl px-5 py-4 backdrop-blur-md">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-white animate-bounce" />
+                      <span className="w-2 h-2 rounded-full bg-white animate-bounce delay-100" />
+                      <span className="w-2 h-2 rounded-full bg-white animate-bounce delay-200" />
                     </div>
                   </div>
                 </motion.div>
-              ))}
-            </AnimatePresence>
+              )}
 
-            {/* Loading Indicator */}
-            {loading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center gap-3"
-              >
-                <div
-                  className="
-                    w-10
-                    h-10
-                    rounded-2xl
-                    bg-gradient-to-br
-                    from-blue-500
-                    to-purple-500
-                    flex
-                    items-center
-                    justify-center
-                    text-sm
-                    font-semibold
-                  "
-                >
-                  AI
-                </div>
+              <div ref={bottomRef} />
+            </div>
 
-                <div
-                  className="
-                    bg-white/10
-                    border
-                    border-white/10
-                    rounded-3xl
-                    px-5
-                    py-4
-                    backdrop-blur-md
-                  "
-                >
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-white animate-bounce" />
-                    <span className="w-2 h-2 rounded-full bg-white animate-bounce delay-100" />
-                    <span className="w-2 h-2 rounded-full bg-white animate-bounce delay-200" />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            <div ref={bottomRef} />
+            {/* Bottom fade shadow */}
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 z-10 bg-gradient-to-t from-black/80 to-transparent" />
           </div>
 
           {/* Input Area */}
