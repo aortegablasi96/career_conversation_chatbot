@@ -70,20 +70,19 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black text-white">
+    <div className="relative h-dvh overflow-hidden bg-black text-white">
 
       {/* Background Glow Effects */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 blur-[120px] rounded-full" />
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/20 blur-[120px] rounded-full" />
 
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 md:p-8">
+      <div className="relative z-10 flex items-center justify-center h-full p-4 md:p-8">
 
         {/* Main Chat Container */}
         <div
           className="
             w-full
-            h-[96vh]
-            sm:h-[95vh]
+            h-full
             mx-2
             sm:mx-4
             md:mx-6
@@ -140,7 +139,7 @@ export default function ChatWindow() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
 
             {/* Empty State */}
             {messages.length === 0 && !loading && (
