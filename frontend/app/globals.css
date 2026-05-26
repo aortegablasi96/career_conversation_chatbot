@@ -33,3 +33,16 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}

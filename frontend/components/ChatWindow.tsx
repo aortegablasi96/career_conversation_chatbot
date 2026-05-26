@@ -211,19 +211,10 @@ export default function ChatWindow() {
                       `}>
                         <div className="
                           prose prose-invert max-w-none
-
-                          prose-p:my-1 prose-p:leading-snug
-
-                          prose-ul:ml-6 prose-ol:ml-6
-                          prose-li:my-0.5 prose-li:leading-snug
-
+                          prose-p:my-1
+                          prose-p:leading-snug
+                          prose-li:leading-snug
                           prose-strong:text-white
-
-                          prose-h1:mb-2 prose-h2:mb-2 prose-h3:mb-1
-                          prose-h1:mt-3 prose-h2:mt-3 prose-h3:mt-2
-
-                          prose-pre:my-2 prose-pre:p-3
-
                           leading-snug
                         ">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
