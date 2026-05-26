@@ -70,6 +70,7 @@ export default function ChatWindow() {
     }
   }
 
+
   return (
     <div className="relative h-dvh overflow-hidden bg-black text-white">
 
