@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { SendHorizonal } from "lucide-react";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -68,14 +69,6 @@ export default function ChatWindow() {
       setLoading(false);
     }
   }
-
-  const formatMarkdown = (text: string) => {
-    return text
-      // ensure list spacing
-      .replace(/\n(?=\d+\.\s)/g, "\n\n")
-      // ensure bullet lists also work
-      .replace(/\n(?=[*-]\s)/g, "\n\n");
-  };
 
   return (
     <div className="relative h-dvh overflow-hidden bg-black text-white">
@@ -220,21 +213,20 @@ export default function ChatWindow() {
 
                           prose-p:my-1 prose-p:leading-snug
 
-                          prose-ul:list-disc prose-ul:ml-5
-                          prose-ol:list-decimal prose-ol:ml-5
-
-                          prose-li:my-0.5
+                          prose-ul:ml-6 prose-ol:ml-6
+                          prose-li:my-0.5 prose-li:leading-snug
 
                           prose-strong:text-white
 
                           prose-h1:mb-2 prose-h2:mb-2 prose-h3:mb-1
+                          prose-h1:mt-3 prose-h2:mt-3 prose-h3:mt-2
 
                           prose-pre:my-2 prose-pre:p-3
 
                           leading-snug
                         ">
-                          <ReactMarkdown>
-                            {formatMarkdown(message.content)}
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
                           </ReactMarkdown>
                         </div>
                       </div>
