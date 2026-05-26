@@ -200,7 +200,7 @@ export default function ChatWindow() {
                       {/* Bubble */}
                       <div className={`
                         rounded-3xl px-5 py-4 shadow-xl
-                        whitespace-pre-wrap transition-all duration-300
+                        transition-all duration-300
                         leading-relaxed
                         ${message.role === "user"
                           ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white"
@@ -210,31 +210,19 @@ export default function ChatWindow() {
                         <div className="
                           prose prose-invert max-w-none
 
-                          /* paragraphs */
-                          prose-p:my-1
-                          prose-p:leading-snug
+                          prose-p:my-1 prose-p:leading-snug
 
-                          /* lists */
-                          prose-ul:my-1
-                          prose-ol:my-1
+                          prose-ul:list-disc prose-ul:ml-5
+                          prose-ol:list-decimal prose-ol:ml-5
+
                           prose-li:my-0.5
 
-                          /* headings */
-                          prose-h1:mb-2
-                          prose-h2:mb-2
-                          prose-h3:mb-1
-                          prose-h1:mt-3
-                          prose-h2:mt-3
-                          prose-h3:mt-2
+                          prose-strong:text-white
 
-                          /* code blocks */
-                          prose-pre:my-2
-                          prose-pre:p-3
+                          prose-h1:mb-2 prose-h2:mb-2 prose-h3:mb-1
 
-                          /* blockquotes */
-                          prose-blockquote:my-2
+                          prose-pre:my-2 prose-pre:p-3
 
-                          /* overall density */
                           leading-snug
                         ">
                           <ReactMarkdown>
