@@ -42,6 +42,11 @@ body {
   list-style-type: decimal;
 }
 
+.prose ul,
+.prose ol {
+  margin-left: 1.25rem;
+}
+
 .prose li {
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
