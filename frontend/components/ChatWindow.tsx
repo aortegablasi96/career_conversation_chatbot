@@ -82,9 +82,16 @@ export default function ChatWindow() {
         <div
           className="
             w-full
-            max-w-5xl
-            h-[92vh]
-            rounded-3xl
+            h-[96vh]
+            sm:h-[95vh]
+            mx-2
+            sm:mx-4
+            md:mx-6
+            lg:mx-8
+
+            rounded-2xl
+            sm:rounded-3xl
+
             border border-white/10
             bg-white/5
             backdrop-blur-2xl
