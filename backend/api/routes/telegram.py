@@ -2,6 +2,7 @@ import os
 import traceback
 import uuid
 import httpx
+import markdown
 from fastapi import APIRouter, Request, BackgroundTasks
 
 from resources.start_messages import START_MESSAGES
@@ -88,11 +89,15 @@ async def process_telegram_update(data: dict):
 
 
 async def send_telegram_message(chat_id: str, text: str):
+
+    html_text = markdown.markdown(text)
+
     async with httpx.AsyncClient() as client:
         await client.post(
             f"{TELEGRAM_API}/sendMessage",
             json={
                 "chat_id": chat_id,
-                "text": text
+                "text": html_text,
+                "parse_mode": "HTML"
             }
         )

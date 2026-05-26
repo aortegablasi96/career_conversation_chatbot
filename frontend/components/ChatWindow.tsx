@@ -133,8 +133,8 @@ export default function ChatWindow() {
                 </h1>
 
                 <p className="text-sm text-neutral-400 mt-1">
-                  Ask about projects, experience,
-                  certifications and AI systems.
+                  Ask about Andreu's experience, studies
+                  certifications, courses and projects.
                 </p>
               </div>
             </div>
