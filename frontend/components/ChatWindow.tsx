@@ -69,6 +69,14 @@ export default function ChatWindow() {
     }
   }
 
+  const formatMarkdown = (text: string) => {
+    return text
+      // ensure list spacing
+      .replace(/\n(?=\d+\.\s)/g, "\n\n")
+      // ensure bullet lists also work
+      .replace(/\n(?=[*-]\s)/g, "\n\n");
+  };
+
   return (
     <div className="relative h-dvh overflow-hidden bg-black text-white">
 
@@ -226,7 +234,7 @@ export default function ChatWindow() {
                           leading-snug
                         ">
                           <ReactMarkdown>
-                            {message.content}
+                            {formatMarkdown(message.content)}
                           </ReactMarkdown>
                         </div>
                       </div>
