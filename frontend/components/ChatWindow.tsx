@@ -115,6 +115,7 @@ export default function ChatWindow() {
                   w-12
                   h-12
                   rounded-2xl
+                  overflow-hidden
                   bg-gradient-to-br
                   from-blue-500
                   to-purple-500
@@ -159,7 +160,7 @@ export default function ChatWindow() {
               {messages.length === 0 && !loading && (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4">
                   <div className="
-                    w-24 h-24 rounded-3xl
+                    w-24 h-24 rounded-3xl overflow-hidden
                     bg-gradient-to-br from-blue-500 to-purple-500
                     flex items-center justify-center
                     text-3xl font-bold mb-6 shadow-2xl
@@ -253,8 +254,12 @@ export default function ChatWindow() {
                   animate={{ opacity: 1 }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-sm font-semibold">
-                    AI
+                  <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-sm font-semibold">
+                    <img
+                      src={ANDREU_AVATAR}
+                      alt="Andreu"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <div className="bg-white/10 border border-white/10 rounded-3xl px-5 py-4 backdrop-blur-md">
