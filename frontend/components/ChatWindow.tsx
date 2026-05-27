@@ -107,43 +107,84 @@ export default function ChatWindow() {
 
           {/* Header */}
           <div className="border-b border-white/10 px-6 py-5 bg-black/20 backdrop-blur-xl">
-            <div className="flex items-center gap-4">
+            
+            <div className="flex items-center justify-between">
 
-              {/* AI Avatar */}
-              <div
+              {/* LEFT SIDE: Avatar */}
+              <div className="flex items-center gap-4">
+
+                {/* AI Avatar */}
+                <div
+                  className="
+                    w-12
+                    h-12
+                    rounded-2xl
+                    overflow-hidden
+                    bg-gradient-to-br
+                    from-blue-500
+                    to-purple-500
+                    flex
+                    items-center
+                    justify-center
+                    font-bold
+                    text-lg
+                    shadow-lg
+                  "
+                >
+                  <img
+                    src={ANDREU_AVATAR}
+                    alt="Andreu"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">
+                    Andreu Ortega AI Assistant
+                  </h1>
+
+                  <p className="text-sm text-neutral-400 mt-1">
+                    Ask about Andreu's experience, studies certifications, courses and projects.
+                  </p>
+                </div>
+              </div>
+
+              {/* RIGHT SIDE: Linkedin*/}
+              <a
+                href="https://www.linkedin.com/in/andreu-ob/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="
-                  w-12
-                  h-12
-                  rounded-2xl
-                  overflow-hidden
-                  bg-gradient-to-br
-                  from-blue-500
-                  to-purple-500
                   flex
                   items-center
-                  justify-center
-                  font-bold
-                  text-lg
-                  shadow-lg
+                  gap-2
+                  px-3
+                  py-2
+                  rounded-xl
+                  bg-white/5
+                  hover:bg-white/10
+                  border
+                  border-white/10
+                  text-sm
+                  text-white/80
+                  hover:text-white
+                  transition
                 "
               >
-                <img
-                      src={ANDREU_AVATAR}
-                      alt="Andreu"
-                      className="w-full h-full object-cover"
-                    />
-              </div>
+                {/* LinkedIn Icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM0 8h5v16H0V8zm7.5 0H12v2.2h.1c.6-1.1 2-2.2 4.1-2.2 4.4 0 5.2 2.9 5.2 6.7V24h-5v-7.5c0-1.8 0-4.2-2.6-4.2s-3 2-3 4V24h-5V8z"/>
+                </svg>
 
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight">
-                  Andreu Ortega AI Assistant
-                </h1>
+                <span>LinkedIn</span>
+              </a>
 
-                <p className="text-sm text-neutral-400 mt-1">
-                  Ask about Andreu's experience, studies
-                  certifications, courses and projects.
-                </p>
-              </div>
             </div>
           </div>
 
