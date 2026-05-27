@@ -21,6 +21,9 @@ export default function ChatWindow() {
   const threadIdRef = useRef(uuidv4());
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const ANDREU_AVATAR = "/imatge_linkedin.jpg"
+  const USER_AVATAR = "/alternative_user_avatar.png"
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -69,7 +72,6 @@ export default function ChatWindow() {
       setLoading(false);
     }
   }
-
 
   return (
     <div className="relative h-dvh overflow-hidden bg-black text-white">
@@ -124,7 +126,11 @@ export default function ChatWindow() {
                   shadow-lg
                 "
               >
-                AI
+                <img
+                      src={ANDREU_AVATAR}
+                      alt="Andreu"
+                      className="w-full h-full object-cover"
+                    />
               </div>
 
               <div>
@@ -158,7 +164,11 @@ export default function ChatWindow() {
                     flex items-center justify-center
                     text-3xl font-bold mb-6 shadow-2xl
                   ">
-                    AI
+                    <img
+                      src={ANDREU_AVATAR}
+                      alt="Andreu"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <h2 className="text-4xl font-bold tracking-tight mb-4">
@@ -188,17 +198,27 @@ export default function ChatWindow() {
                     }`}>
 
                       {/* Avatar */}
-                      <div className={`
-                        w-10 h-10 rounded-2xl flex items-center justify-center
-                        text-sm font-semibold shrink-0 shadow-lg
-                        ${message.role === "user"
-                          ? "bg-white text-black"
-                          : "bg-gradient-to-br from-blue-500 to-purple-500"
-                        }
-                      `}>
-                        {message.role === "user" ? "Y" : "AI"}
+                      <div
+                        className={`
+                          w-10 h-10 rounded-2xl overflow-hidden
+                          flex items-center justify-center
+                          shrink-0 shadow-lg
+                          ${message.role === "user"
+                            ? "bg-white"
+                            : "bg-gradient-to-br from-blue-500 to-purple-500"
+                          }
+                        `}
+                      >
+                        <img
+                          src={
+                            message.role === "user"
+                              ? USER_AVATAR
+                              : ANDREU_AVATAR
+                          }
+                          alt="avatar"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-
                       {/* Bubble */}
                       <div className={`
                         rounded-3xl px-5 py-4 shadow-xl
