@@ -144,7 +144,7 @@ export default function ChatWindow() {
                   </h1>
 
                   <p className="text-sm text-neutral-400 mt-1">
-                    Ask about Andreu's experience, studies certifications, courses and projects.
+                    Ask about Andreu's professional experience, studies, certifications, courses and projects.
                   </p>
                 </div>
               </div>
@@ -218,8 +218,7 @@ export default function ChatWindow() {
                   </h2>
 
                   <p className="max-w-xl text-neutral-400 leading-relaxed">
-                    Ask anything about Andreu Ortega’s projects, frontend engineering,
-                    AI integrations, certifications, or professional experience.
+                    Ask about Andreu's professional experience, studies, certifications, courses and projects.
                   </p>
                 </div>
               )}
