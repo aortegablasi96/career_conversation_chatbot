@@ -22,7 +22,7 @@ export default function ChatWindow() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const ANDREU_AVATAR = "/imatge_linkedin.jpg"
-  const USER_AVATAR = "/alternative_user_avatar.png"
+  const USER_AVATAR = "/alternative_user_avatar2.png"
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
