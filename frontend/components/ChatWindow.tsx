@@ -74,7 +74,7 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-black text-white">
+    <div className="relative h-[100dvh] overflow-hidden bg-black text-white">
 
       {/* Background Glow Effects */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 blur-[120px] rounded-full" />
@@ -106,9 +106,9 @@ export default function ChatWindow() {
         >
 
           {/* Header */}
-          <div className="border-b border-white/10 px-6 py-5 bg-black/20 backdrop-blur-xl">
+          <div className="border-b border-white/10 px-4 sm:px-6 py-3 sm:py-5 bg-black/20 backdrop-blur-xl">
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
 
               {/* LEFT SIDE: Avatar */}
               <div className="flex items-center gap-4">
@@ -143,7 +143,7 @@ export default function ChatWindow() {
                     Andreu Ortega AI Assistant
                   </h1>
 
-                  <p className="text-sm text-neutral-400 mt-1">
+                  <p className="hidden sm:block text-sm text-neutral-400 mt-1">
                     Ask about Andreu's professional experience, studies, certifications, courses and projects.
                   </p>
                 </div>
@@ -182,7 +182,7 @@ export default function ChatWindow() {
                   <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM0 8h5v16H0V8zm7.5 0H12v2.2h.1c.6-1.1 2-2.2 4.1-2.2 4.4 0 5.2 2.9 5.2 6.7V24h-5v-7.5c0-1.8 0-4.2-2.6-4.2s-3 2-3 4V24h-5V8z"/>
                 </svg>
 
-                <span>LinkedIn</span>
+                <span className="hidden sm:inline">LinkedIn</span>
               </a>
 
             </div>
@@ -195,7 +195,7 @@ export default function ChatWindow() {
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10 bg-gradient-to-b from-black/80 to-transparent" />
 
             {/* Scroll area */}
-            <div className="h-full overflow-y-auto no-scrollbar px-4 md:px-8 py-6 space-y-6">
+            <div className="h-full overflow-y-auto no-scrollbar overscroll-contain px-4 md:px-8 py-6 space-y-4 sm:space-y-6">
               
               {/* Empty State */}
               {messages.length === 0 && !loading && (
@@ -234,7 +234,7 @@ export default function ChatWindow() {
                       message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
-                    <div className={`flex gap-3 max-w-[85%] ${
+                    <div className={`flex gap-3 max-w-[92%] sm:max-w-[80%] ${
                       message.role === "user" ? "flex-row-reverse" : ""
                     }`}>
 
@@ -262,7 +262,7 @@ export default function ChatWindow() {
                       </div>
                       {/* Bubble */}
                       <div className={`
-                        rounded-3xl px-5 py-4 shadow-xl
+                        rounded-3xl px-4 sm:px-5 py-3 sm:py-4 shadow-xl
                         transition-all duration-300
                         leading-relaxed
                         ${message.role === "user"
@@ -322,12 +322,12 @@ export default function ChatWindow() {
           {/* Input Area */}
           <div
             className="
-              border-t
-              border-white/10
-              p-4
-              md:p-6
-              bg-black/20
-              backdrop-blur-xl
+              border-t border-white/10
+              p-4 md:p-6
+              bg-black/20 backdrop-blur-xl
+
+              sticky bottom-0
+              pb-[env(safe-area-inset-bottom)]
             "
           >
             <div
