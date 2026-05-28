@@ -7,52 +7,89 @@ export default function AppLoader({
 }: {
   children: React.ReactNode
 }) {
+  // Tracks whether server is reachable
   const [ready, setReady] = useState(false)
+
+  // Controls UI transition (slightly delayed after ready)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
-    async function wakeServer() {
+    async function waitForServer() {
       while (!cancelled) {
         try {
-          const res = await fetch("https://career-conversation-chatbot.onrender.com/health")
+          const res = await fetch("/api/health")
 
           if (res.ok) {
             setReady(true)
             return
           }
-        } catch (err) {}
+        } catch (err) {
+          // ignore errors while warming up
+        }
 
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        await new Promise((r) => setTimeout(r, 2000))
       }
     }
 
-    wakeServer()
+    waitForServer()
 
     return () => {
       cancelled = true
     }
   }, [])
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white border-t-transparent" />
+  // Once server is ready, trigger smooth UI transition
+  useEffect(() => {
+    if (!ready) return
 
-          <div className="text-center">
-            <h1 className="text-xl font-semibold">
-              Waking up server...
-            </h1>
+    const t = setTimeout(() => {
+      setVisible(true)
+    }, 300) // small delay makes fade feel intentional
 
-            <p className="mt-2 text-sm text-gray-400">
-              This may take a few seconds
-            </p>
-          </div>
+    return () => clearTimeout(t)
+  }, [ready])
+
+  return (
+    <div className="relative h-screen w-full overflow-hidden bg-black text-white">
+
+      {/* ================= LOADER LAYER ================= */}
+      <div
+        className={`
+          absolute inset-0 flex items-center justify-center
+          transition-opacity duration-500 ease-out
+          ${visible ? "opacity-0 pointer-events-none" : "opacity-100"}
+        `}
+      >
+        {/* Background glow (match ChatWindow style) */}
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/20 blur-[120px] rounded-full" />
+
+        {/* Loader content */}
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+
+          <h1 className="text-lg font-medium">
+            Waking up server...
+          </h1>
+
+          <p className="text-sm text-neutral-400 text-center max-w-sm">
+            Preparing your workspace
+          </p>
         </div>
       </div>
-    )
-  }
 
-  return <>{children}</>
+      {/* ================= APP LAYER ================= */}
+      <div
+        className={`
+          h-full w-full
+          transition-opacity duration-500 ease-out
+          ${visible ? "opacity-100" : "opacity-0"}
+        `}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }

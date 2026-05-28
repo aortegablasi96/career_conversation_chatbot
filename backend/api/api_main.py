@@ -22,4 +22,3 @@ app.add_middleware(
 app.include_router(chatbot_router)
 app.include_router(telegram_router)
 app.include_router(app_router)
-
