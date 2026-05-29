@@ -339,7 +339,7 @@ export default function ChatWindow() {
                 border
                 border-white/10
                 bg-white/5
-                px-4
+                px-3 sm:px-4
                 py-3
                 shadow-lg
                 focus-within:border-blue-500/50
@@ -358,6 +358,7 @@ export default function ChatWindow() {
                 }}
                 placeholder="Ask about Andreu..."
                 className="
+                  min-w-0
                   flex-1
                   bg-transparent
                   outline-none
