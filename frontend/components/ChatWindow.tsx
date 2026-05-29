@@ -334,7 +334,7 @@ export default function ChatWindow() {
                 mx-auto
                 flex
                 items-center
-                gap-3
+                gap-2
                 rounded-2xl
                 border
                 border-white/10
@@ -370,9 +370,9 @@ export default function ChatWindow() {
                 onClick={handleSend}
                 disabled={loading}
                 className="
-                  h-12
-                  min-w-[52px]
-                  w-11
+                  h-11
+                  w-12
+                  shrink-0
                   rounded-xl
                   bg-gradient-to-r
                   from-blue-500
