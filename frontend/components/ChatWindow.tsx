@@ -195,7 +195,7 @@ export default function ChatWindow() {
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10 bg-gradient-to-b from-black/80 to-transparent" />
 
             {/* Scroll area */}
-            <div className="h-full overflow-y-auto no-scrollbar overscroll-contain px-4 md:px-8 py-6 space-y-4 sm:space-y-6">
+            <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-y-contain px-4 md:px-8 py-6 space-y-4 sm:space-y-6">
               
               {/* Empty State */}
               {messages.length === 0 && !loading && (
@@ -325,13 +325,13 @@ export default function ChatWindow() {
               border-t border-white/10
               p-4 md:p-6
               bg-black/20 backdrop-blur-xl
-
-              sticky bottom-0
-              pb-[env(safe-area-inset-bottom)]
+              pb-[calc(env(safe-area-inset-bottom)+12px)]
             "
           >
             <div
               className="
+                w-full
+                mx-auto
                 flex
                 items-center
                 gap-3
@@ -370,7 +370,8 @@ export default function ChatWindow() {
                 onClick={handleSend}
                 disabled={loading}
                 className="
-                  h-11
+                  h-12
+                  min-w-[52px]
                   w-11
                   rounded-xl
                   bg-gradient-to-r
