@@ -356,7 +356,7 @@ export default function ChatWindow() {
                     handleSend();
                   }
                 }}
-                placeholder="Ask something about Andreu Ortega..."
+                placeholder="Ask something about Andreu..."
                 className="
                   flex-1
                   bg-transparent
