@@ -74,7 +74,7 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-black text-white">
+    <div className="relative h-[100dvh] overflow-hidden overscroll-none bg-black text-white">
 
       {/* Background Glow Effects */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 blur-[120px] rounded-full" />
