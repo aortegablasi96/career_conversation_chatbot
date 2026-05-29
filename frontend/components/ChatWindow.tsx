@@ -356,7 +356,11 @@ export default function ChatWindow() {
                     handleSend();
                   }
                 }}
-                placeholder="Ask something about Andreu..."
+                placeholder={
+                  window.innerWidth < 640
+                    ? "Ask about Andreu..."
+                    : "Ask something about Andreu..."
+                }
                 className="
                   flex-1
                   bg-transparent
