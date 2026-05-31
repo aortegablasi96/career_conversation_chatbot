@@ -28,10 +28,10 @@ class RecordDetailsInput(BaseModel):
     notes: str = Field(description="User additional notes", default="not provided")
 
 @function_tool(name_override="RecordUserDetailsTool")
-def record_user_details(payload: RecordDetailsInput) -> Dict[str, str]:
+async def record_user_details(payload: RecordDetailsInput) -> Dict[str, str]:
     """ Send a push notification with the user's information """
-    
-    push(f"Career conversation agent - Recording contact details of interested user: {payload.name} with email {payload.email} and notes {payload.notes}")
+
+    await push(f"Career conversation agent - Recording contact details of interested user: {payload.name} with email {payload.email} and notes {payload.notes}")
     return {"recorded": "ok"}
 
 contact_agent = Agent(

@@ -1,5 +1,5 @@
 from typing import Literal, Optional
-from agents import Agent
+from agents import Agent, ModelSettings
 from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
@@ -221,5 +221,6 @@ filter_agent = Agent(
     name="FilterAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
-    output_type=FilterOutput
+    output_type=FilterOutput,
+    model_settings=ModelSettings(temperature=0, max_tokens=500, prompt_cache_retention="in_memory"),
 )

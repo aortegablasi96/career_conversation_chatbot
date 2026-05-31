@@ -113,7 +113,7 @@ class Nodes:
         normalized_output = result.final_output
         state.retrieval_query = normalized_output.normalized_query
 
-        documents = search_knowledge_base(normalized_output, active_topic=state.active_topic)
+        documents = await search_knowledge_base(normalized_output, active_topic=state.active_topic)
 
         state.relevant_documents = documents or []
 

@@ -1,16 +1,17 @@
 import os
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
 
-def push(text: str) -> None:
-    requests.post(
-        "https://api.pushover.net/1/messages.json",
-        data={
-            "token": os.getenv("PUSHOVER_TOKEN"),
-            "user": os.getenv("PUSHOVER_USER"),
-            "message": text,
-        },
-    )
+async def push(text: str) -> None:
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            "https://api.pushover.net/1/messages.json",
+            data={
+                "token": os.getenv("PUSHOVER_TOKEN"),
+                "user": os.getenv("PUSHOVER_USER"),
+                "message": text,
+            },
+        )

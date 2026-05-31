@@ -1,4 +1,4 @@
-from agents import Agent
+from agents import Agent, ModelSettings
 from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
@@ -234,5 +234,6 @@ query_normalizer_agent = Agent(
     name="QueryNormalizerAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
-    output_type=QueryNormalizedOutput  
+    output_type=QueryNormalizedOutput,
+    model_settings=ModelSettings(temperature=0, max_tokens=500, prompt_cache_retention="in_memory"),
 )

@@ -1,6 +1,7 @@
+import asyncio
 import pickle
 from pathlib import Path
-from agents import Agent, function_tool
+from agents import Agent, function_tool, ModelSettings
 from pydantic import BaseModel, Field
 from typing import Dict, Optional
 from datetime import datetime
@@ -20,11 +21,11 @@ DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
 BM25_PATH = Path(__file__).parent.parent / "storage" / "bm25_index.pkl"
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-RETRIEVAL_K = 10
-FILTER_K = 10
+RETRIEVAL_K = 20
+FILTER_K = 12
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
-retriever = vectorstore.as_retriever()
+retriever = vectorstore.as_retriever(search_kwargs={"k": RETRIEVAL_K})
 
 if BM25_PATH.exists():
     with open(BM25_PATH, "rb") as f:
@@ -37,6 +38,8 @@ else:
         if text
     ]
     bm25 = BM25Retriever.from_documents(_docs)
+
+bm25.k = RETRIEVAL_K
 
 reranker = CohereRerank(top_n=FILTER_K, model="rerank-english-v3.0")
 
@@ -67,7 +70,7 @@ def format_documents(documents):
     return "\n\n".join(formatted)
 
 
-def search_knowledge_base(
+async def search_knowledge_base(
     normalization_output: QueryNormalizedOutput,
     active_topic: Optional[str] = None,
 ):
@@ -77,6 +80,7 @@ def search_knowledge_base(
     - query expansion retrieval
     - lexical/BM25 retrieval
     - Cohere reranking
+    All retrieval queries run concurrently via asyncio.gather.
     """
 
     # ---------------------------------
@@ -92,29 +96,32 @@ def search_knowledge_base(
     semantic_queries = semantic_queries[:3]
 
     # ---------------------------------
-    # 2. Semantic vector retrieval
+    # 2. Choose retriever (with optional topic filter)
     # ---------------------------------
 
     doc_types = TOPIC_TO_DOC_TYPE.get(active_topic) if active_topic else None
     if doc_types:
         active_retriever = vectorstore.as_retriever(
-            search_kwargs={"filter": {"doc_type": {"$in": doc_types}}}
+            search_kwargs={"k": RETRIEVAL_K, "filter": {"doc_type": {"$in": doc_types}}}
         )
     else:
         active_retriever = retriever
 
-    semantic_docs = []
-
-    for query in semantic_queries:
-        results = active_retriever.invoke(query, k=RETRIEVAL_K)
-        semantic_docs.extend(results)
-
     # ---------------------------------
-    # 3. BM25 lexical retrieval
+    # 3. Parallel: semantic queries + BM25
     # ---------------------------------
 
     keyword_query = " ".join(normalization_output.retrieval_keywords)
-    bm_docs = bm25.invoke(keyword_query, k=RETRIEVAL_K)
+
+    tasks = [active_retriever.ainvoke(q) for q in semantic_queries]
+    tasks.append(bm25.ainvoke(keyword_query))
+
+    all_results = await asyncio.gather(*tasks)
+
+    bm_docs = all_results[-1]
+    semantic_docs = []
+    for result in all_results[:-1]:
+        semantic_docs.extend(result)
 
     # ---------------------------------
     # 4. Merge + deduplicate
@@ -135,12 +142,16 @@ def search_knowledge_base(
             combined.append(doc)
 
     # ---------------------------------
-    # 5. Cohere reranking
+    # 5. Cohere reranking (blocking — offloaded to thread pool)
     # ---------------------------------
 
-    reranked_indexes = reranker.rerank(
-        query=normalization_output.normalized_query,
-        documents=combined,
+    loop = asyncio.get_running_loop()
+    reranked_indexes = await loop.run_in_executor(
+        None,
+        lambda: reranker.rerank(
+            query=normalization_output.normalized_query,
+            documents=combined,
+        ),
     )
 
     # ---------------------------------
@@ -327,17 +338,18 @@ class RecordUnknownQuestionInput(BaseModel):
     query: str = Field(description="Query to be sent as push notification")
 
 @function_tool(name_override="RecordQuestionsTool")
-def record_unknown_question(payload: RecordUnknownQuestionInput) -> Dict[str, str]:
+async def record_unknown_question(payload: RecordUnknownQuestionInput) -> Dict[str, str]:
     """ Send a push notification with the unkown query """
 
-    push(f"Career Conversation Agent - Recording unknown question: {payload.query}")
+    await push(f"Career Conversation Agent - Recording unknown question: {payload.query}")
     return {"recorded": "ok"}
 
 conversation_agent = Agent(
     name="ConversationAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
-    tools=[record_unknown_question]
+    tools=[record_unknown_question],
+    model_settings=ModelSettings(prompt_cache_retention="in_memory"),
 )
 
         
