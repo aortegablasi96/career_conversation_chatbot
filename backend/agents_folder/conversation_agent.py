@@ -22,7 +22,7 @@ BM25_PATH = Path(__file__).parent.parent / "storage" / "bm25_index.pkl"
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 RETRIEVAL_K = 15
-FILTER_K = 10
+FILTER_K = 15
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever(search_kwargs={"k": RETRIEVAL_K})
@@ -45,9 +45,10 @@ reranker = CohereRerank(top_n=FILTER_K, model="rerank-english-v3.0")
 
 # Maps detected_topic values to knowledge-base folder names (doc_type metadata)
 TOPIC_TO_DOC_TYPE: dict[str, list[str]] = {
+    "career": ["experiences"],
+    "projects": ["experiences"],
     "education": ["studies", "courses"],
     "certifications": ["certifications"],
-    "languages": ["languages"],
     "contact_request": ["profile"],
     "personal_background": ["profile"],
 }

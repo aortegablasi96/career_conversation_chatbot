@@ -87,6 +87,16 @@ Both `chatbot.py` (`sessions` dict) and `telegram.py` (`sessions`, `chat_histori
 
 ---
 
+### 13. `"career"` topic not mapped in `TOPIC_TO_DOC_TYPE` — experience list is always incomplete
+
+When a user asks "list all your working experiences", the filter agent correctly classifies `detected_topic = "career"`. However, `TOPIC_TO_DOC_TYPE` in `conversation_agent.py` had no entry for `"career"`, so `doc_types` resolved to `None` and the retriever searched the entire corpus without any metadata filter. All 6 experience documents competed against every other document in the knowledge base. After Cohere reranking with `top_n=10`, cross-category documents crowded out one or more experience entries — resulting in a list that consistently missed a role. The same root cause applied to `"projects"`, which was also unmapped. A similar but milder issue affected courses: `"education"` was correctly mapped to `["studies", "courses"]`, but with 9 course files plus study documents the candidate pool could exceed 10 entries and the reranker at `top_n=10` could drop one course.
+
+**Fix:**
+1. Add `"career": ["experiences"]` and `"projects": ["experiences"]` to `TOPIC_TO_DOC_TYPE`.
+2. Raise `FILTER_K` from 10 → 15 to give the reranker enough headroom above the largest single category (9 courses).
+
+---
+
 ---
 
 ## Backend Improvements
@@ -112,7 +122,7 @@ Both `chatbot.py` (`sessions` dict) and `telegram.py` (`sessions`, `chat_histori
   > ✅ **Fixed:** Restructured 23 knowledge-base files across `languages/`, `certifications/`, `courses/`, `experiences/`, and `studies/` folders. No content was changed — only the markdown header hierarchy was flattened. The 7 remaining documents (`profile/`, `skills/`, `experiences/AI-projects.md`) already had adequate structure and were left unchanged.
 
 - **Add metadata filtering to vector retrieval:** Chroma supports filtering by `doc_type` metadata (certifications, experiences, skills, etc.). When `state.active_topic` is known, pass a filter to narrow retrieval instead of searching the full corpus.
-  > ✅ **Fixed:** Added `TOPIC_TO_DOC_TYPE` mapping in `conversation_agent.py` (e.g. `"certifications" → ["certifications"]`, `"education" → ["studies", "courses"]`). `search_knowledge_base()` now accepts an optional `active_topic` parameter; when it maps to known doc_types, the Chroma retriever is constructed with a `{"doc_type": {"$in": doc_types}}` filter. `nodes.py` passes `state.active_topic` to the call. Broad topics (`skills`, `career`, `projects`) are deliberately left unfiltered to avoid missing cross-folder results.
+  > ✅ **Fixed:** Added `TOPIC_TO_DOC_TYPE` mapping in `conversation_agent.py`. `search_knowledge_base()` now accepts an optional `active_topic` parameter; when it maps to known doc_types, the Chroma retriever is constructed with a `{"doc_type": {"$in": doc_types}}` filter. `nodes.py` passes `state.active_topic` to the call. Initial mappings: `"certifications" → ["certifications"]`, `"education" → ["studies", "courses"]`, `"contact_request" / "personal_background" → ["profile"]`. `"skills"` is left unfiltered (cross-folder relevance). **Updated (see problem #13):** `"career" → ["experiences"]` and `"projects" → ["experiences"]` added after testing revealed incomplete experience lists; the dead `"languages"` entry (filter agent never emits that topic) was removed.
 
 ### State Machine & Agents
 
@@ -234,7 +244,7 @@ Both `chatbot.py` (`sessions` dict) and `telegram.py` (`sessions`, `chat_histori
   > ⏭️ **Skipped:** The filter agent must still run to classify the message; a pre-filter only saves LangGraph overhead on a narrow subset of inputs. Marginal benefit.
 - **Reduce retrieved context passed to the conversation agent:** `FILTER_K` and `RETRIEVAL_K` were both 10 (`conversation_agent.py`), meaning up to 10 full documents are formatted and injected into the conversation agent prompt. Additionally, `RETRIEVAL_K` was effectively ignored — the global retriever was constructed as `vectorstore.as_retriever()` with no `search_kwargs`, leaving Chroma and BM25 at their silent default of `k=4` regardless of the declared value.
   > ✅ **Fixed:** Both values recalibrated against the actual corpus (30 documents, no chunking: courses=9, experiences=6, profile=3, skills=4, languages=4, certifications=2, studies=2):
-  > - `FILTER_K = 10` — covers the largest category (courses, 9 documents) with 1 slot of headroom; all experience (6) and profile (3) documents fit comfortably within this limit for broad queries.
+  > - `FILTER_K = 15` — raised from 10 after testing revealed that 9 courses + study documents could exceed the old cap and cause the reranker to drop one entry (see problem #13). 15 gives comfortable headroom above the largest single category.
   > - `RETRIEVAL_K = 15` — 3 parallel semantic queries × 15 yields up to 45 hits, deduped to ~20–25 unique on a 30-document corpus; BM25 × 15 adds more, giving the Cohere reranker a ~2.5–3× candidate pool relative to `FILTER_K`. For topic-filtered queries Chroma caps naturally at the available category size.
   > - Bug fixed: `RETRIEVAL_K` is now wired into all three retriever constructions — global retriever via `search_kwargs={"k": RETRIEVAL_K}`, topic-filtered retriever via `search_kwargs={"k": RETRIEVAL_K, "filter": ...}`, and `bm25.k = RETRIEVAL_K` set after loading from disk.
 
