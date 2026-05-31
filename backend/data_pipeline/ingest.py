@@ -35,6 +35,9 @@ def fetch_documents():
     return documents
 
 
+MIN_CHUNK_CHARS = 300
+
+
 def create_chunks(documents):
     header_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
@@ -44,15 +47,29 @@ def create_chunks(documents):
 
     all_chunks = []
     for doc in documents:
-        header_splits = header_splitter.split_text(doc.page_content)
-        for split in header_splits:
-            split.metadata["doc_type"] = doc.metadata.get("doc_type", "")
-            split.metadata["source"] = doc.metadata.get("source", "")
-        char_splits = char_splitter.split_documents(header_splits)
-        all_chunks.extend(char_splits)
+        doc_type = doc.metadata.get("doc_type", "")
+        source = doc.metadata.get("source", "")
 
+        if len(doc.page_content.strip()) < MIN_CHUNK_CHARS:
+            all_chunks.append(doc)
+        else:
+            header_splits = header_splitter.split_text(doc.page_content)
+            for split in header_splits:
+                split.metadata["doc_type"] = doc_type
+                split.metadata["source"] = source
+            char_splits = char_splitter.split_documents(header_splits)
+            all_chunks.extend(char_splits)
+
+    basename_cache: dict[str, str] = {}
     for i, chunk in enumerate(all_chunks):
-        chunk.metadata["chunk_id"] = f"{chunk.metadata.get('source', '')}::{i}"
+        source = chunk.metadata.get("source", "")
+        doc_type = chunk.metadata.get("doc_type", "")
+        if source not in basename_cache:
+            stem = Path(source).stem
+            basename_cache[source] = stem.replace("_", " ").replace("-", " ")
+        clean_name = basename_cache[source]
+        chunk.page_content = f"[Category: {doc_type} | Document: {clean_name}]\n{chunk.page_content}"
+        chunk.metadata["chunk_id"] = f"{source}::{i}"
 
     return all_chunks
 

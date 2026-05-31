@@ -1,23 +1,9 @@
-## Experience description
+# Experience: Junior Project Manager in data & digital projects at Randstad
 
-### Position:
+**Location:** Leuven, Belgium  
+**Duration:** From March 2022 to May 2023
 
-Junior Project Manager in data & digital projects
-
-### Company:
-
-Randstad
-
-### Where:
-
-Leuven, Belgium 
-
-### Duration:
-
-From March 2022 to May 2023
-
-### Summary:
-
+**Summary:**
 - Coordinated cross-functional delivery teams across data analytics, ML, cloud, and
 embedded software projects for external clients.
 - Managed project planning, backlog prioritization, stakeholder alignment, and delivery

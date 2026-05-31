@@ -1,13 +1,5 @@
-## Language description:
+# Language: Spanish
 
-### Language:
+**Level:** Mother tongue
 
-Spanish
-
-## Level:
-
-Mother tongue
-
-### Descrition
-
-Able to natively speak, read and write
+**Descrition:** Able to natively speak, read and write

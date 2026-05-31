@@ -1,23 +1,9 @@
-## Experience description
+# Experience: Junior Digital Solutions Manager at Ponera Group AG
 
-### Position:
+**Location:** Lugano, Switzerland  
+**Duration:** From June 2023 to October 2024
 
-Junior Digital Solutions Manager
-
-### Company:
-
-Ponera Group AG
-
-### Where:
-
-Lugano, Switzerland 
-
-### Duration:
-
-From June 2023 to October 2024
-
-### Summary:
-
+**Summary:**
 - Led end-to-end development of 4 IoT-enabled SaaS products as Product Owner,
 coordinating external software providers and ensuring delivery against scope, timeline,
 and quality targets.

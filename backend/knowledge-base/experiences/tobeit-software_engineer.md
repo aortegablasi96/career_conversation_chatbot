@@ -1,23 +1,9 @@
-## Experience description
+# Experience: Software Engineer at ToBeIT
 
-### Position:
+**Location:** Barcelona, Spain  
+**Duration:** From September 2020 to July 2021
 
-Software Engineer
-
-### Company:
-
-ToBeIT
-
-### Where:
-
-Barcelona, Spain
-
-### Duration:
-
-From September 2020 to July 2021
-
-### Summary:
-
+**Summary:**
 - Developed automation solutions using Python and RPA technologies to streamline
 internal operational processes.
 - Designed and implemented databases and data pipelines supporting internal

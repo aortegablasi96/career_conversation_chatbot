@@ -1,13 +1,5 @@
-## Language description:
+# Language: Italian
 
-### Language:
+**Level:** B2
 
-Italian
-
-## Level:
-
-B2
-
-### Descrition
-
-Able to speak, read and write at a professional proficiency 
+**Descrition:** Able to speak, read and write at a professional proficiency

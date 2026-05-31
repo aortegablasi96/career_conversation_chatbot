@@ -44,6 +44,7 @@ reranker = CohereRerank(top_n=FILTER_K, model="rerank-english-v3.0")
 TOPIC_TO_DOC_TYPE: dict[str, list[str]] = {
     "education": ["studies", "courses"],
     "certifications": ["certifications"],
+    "languages": ["languages"],
     "contact_request": ["profile"],
     "personal_background": ["profile"],
 }

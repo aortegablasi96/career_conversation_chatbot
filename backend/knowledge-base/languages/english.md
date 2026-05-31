@@ -1,13 +1,5 @@
-## Language description:
+# Language: English
 
-### Language:
+**Level:** C1
 
-English
-
-## Level:
-
-C1
-
-### Descrition
-
-Able to speak, read and write with professional fluency
+**Descrition:** Able to speak, read and write with professional fluency

@@ -1,6 +1,4 @@
-## AI-Initiatives:
-
-### Hands-on in a diverse range of AI projects:
+# AI Initiatives: Hands-on in a diverse range of AI projects
 
 Developed hands-on expertise in Artificial Intelligence and Generative AI product development, with a focus on practical implementation and real-world business
 applications. These are some example projects I have worked on:

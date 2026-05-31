@@ -1,13 +1,5 @@
-## Language description:
+# Language: Catalan
 
-### Language:
+**Level:** Mother tongue
 
-Catalan
-
-### Level:
-
-Mother tongue
-
-### Descrition
-
-Able to natively speak, read and write
+**Descrition:** Able to natively speak, read and write

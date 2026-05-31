@@ -1,20 +1,9 @@
-## Certification description:
+# Certification: Certified Professional in Managing AI (CPMAI)
 
-### Certification:
+**Institution:** Project Management Institution (PMI)  
+**Date of emission:** May 2026
 
-Certified Professional in Managing AI (CPMAI)
-
-### Institution:
-
-Project Management Institution (PMI)
-
-### Date of emission:
-
-May 2026
-
-### Description:
-
-It covers the foundations of AI project management and data management. It divides AI projects into several steps and goes deep evaluting the available methodologies and potential problems to face along the way. The steps are:
+**Description:** It covers the foundations of AI project management and data management. It divides AI projects into several steps and goes deep evaluting the available methodologies and potential problems to face along the way. The steps are:
 
 - Business Understanding: Aligning AI projects with organizational strategy and ROI.
 - Data Understanding: Identifying, acquiring, and assessing data sources.

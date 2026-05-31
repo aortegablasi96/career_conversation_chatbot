@@ -1,20 +1,6 @@
-## Course description:
+# Course: PMP preparation Course by Technical Institute of America
 
-### Name:
+**Finishing date:** May 2024  
+**Credential:** https://www.udemy.com/certificate/UC-4d86eee4-c8a3-44f9-8511-6102597801fc/
 
-PMP preparation Course by Technical Institute of America
-
-### Finishing date:
-
-May 2024 
-
-### Credential:
-
-https://www.udemy.com/certificate/UC-4d86eee4-c8a3-44f9-8511-6102597801fc/
-
-### Description:
-
-It gives an overview of Notion's features and how to use it starting from zero till learning the most complex features.
-
-
-
+**Description:** It gives an overview of Notion's features and how to use it starting from zero till learning the most complex features.
