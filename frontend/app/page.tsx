@@ -1,5 +1,10 @@
 import ChatWindow from "@/components/ChatWindow";
+import ChatErrorBoundary from "@/components/ChatErrorBoundary";
 
 export default function Home() {
-  return <ChatWindow />;
+  return (
+    <ChatErrorBoundary>
+      <ChatWindow />
+    </ChatErrorBoundary>
+  );
 }
