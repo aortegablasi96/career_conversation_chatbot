@@ -1,7 +1,7 @@
 # Experience: Global Product Specialist - Digital Solutions at ABB
 
 **Location:** Quartino, Switzerland  
-**Duration:** From October 2024 to January 2026 (which means I do not work anymore, and that's my last experience)
+**Duration:** From October 2024 to January 2026
 
 **Summary:**
 - Managed and evolved a portfolio of digital SaaS solutions focused on connectivity,

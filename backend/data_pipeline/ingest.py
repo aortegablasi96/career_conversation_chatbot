@@ -1,10 +1,8 @@
 import os
 import glob
 import pickle
-import shutil
 from pathlib import Path
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
@@ -35,43 +33,19 @@ def fetch_documents():
     return documents
 
 
-MIN_CHUNK_CHARS = 300
-
-
-def create_chunks(documents):
-    header_splitter = MarkdownHeaderTextSplitter(
-        headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
-        strip_headers=False,
-    )
-    char_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-
-    all_chunks = []
-    for doc in documents:
-        doc_type = doc.metadata.get("doc_type", "")
-        source = doc.metadata.get("source", "")
-
-        if len(doc.page_content.strip()) < MIN_CHUNK_CHARS:
-            all_chunks.append(doc)
-        else:
-            header_splits = header_splitter.split_text(doc.page_content)
-            for split in header_splits:
-                split.metadata["doc_type"] = doc_type
-                split.metadata["source"] = source
-            char_splits = char_splitter.split_documents(header_splits)
-            all_chunks.extend(char_splits)
-
+def enrich_documents(documents):
+    """Prepend a source-context prefix and assign a chunk_id to every document. No splitting."""
     basename_cache: dict[str, str] = {}
-    for i, chunk in enumerate(all_chunks):
-        source = chunk.metadata.get("source", "")
-        doc_type = chunk.metadata.get("doc_type", "")
+    for i, doc in enumerate(documents):
+        source = doc.metadata.get("source", "")
+        doc_type = doc.metadata.get("doc_type", "")
         if source not in basename_cache:
             stem = Path(source).stem
             basename_cache[source] = stem.replace("_", " ").replace("-", " ")
         clean_name = basename_cache[source]
-        chunk.page_content = f"[Category: {doc_type} | Document: {clean_name}]\n{chunk.page_content}"
-        chunk.metadata["chunk_id"] = f"{source}::{i}"
-
-    return all_chunks
+        doc.page_content = f"[Category: {doc_type} | Document: {clean_name}]\n{doc.page_content}"
+        doc.metadata["chunk_id"] = f"{source}::0"
+    return documents
 
 
 def create_embeddings(chunks):
@@ -100,8 +74,8 @@ def save_bm25(chunks):
 
 if __name__ == "__main__":
     documents = fetch_documents()
-    chunks = create_chunks(documents)
-    print(f"Created {len(chunks)} chunks from {len(documents)} documents")
-    vectorstore = create_embeddings(chunks)
-    save_bm25(chunks)
+    documents = enrich_documents(documents)
+    print(f"Prepared {len(documents)} documents (no chunking)")
+    vectorstore = create_embeddings(documents)
+    save_bm25(documents)
     print("Ingestion complete")
