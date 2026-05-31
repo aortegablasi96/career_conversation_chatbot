@@ -21,8 +21,8 @@ DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
 BM25_PATH = Path(__file__).parent.parent / "storage" / "bm25_index.pkl"
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-RETRIEVAL_K = 20
-FILTER_K = 12
+RETRIEVAL_K = 15
+FILTER_K = 10
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever(search_kwargs={"k": RETRIEVAL_K})

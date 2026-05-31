@@ -43,7 +43,7 @@ def create_chunks(documents):
         headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
         strip_headers=False,
     )
-    char_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    char_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
     all_chunks = []
     for doc in documents:
