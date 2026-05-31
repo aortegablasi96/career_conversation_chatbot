@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
 
-## Getting Started
+Next.js 15 frontend for the Career Conversation Chatbot.
 
-First, run the development server:
+## Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+frontend/
+├── app/
+│   ├── layout.tsx           # Root layout
+│   ├── page.tsx             # Single page — renders <ChatWindow />
+│   ├── globals.css          # Global styles (Tailwind base)
+│   └── api/
+│       └── health/
+│           └── route.ts     # Internal health-check route
+│
+├── components/
+│   ├── AppLoader.tsx        # Calls POST /warmup, shows loading state until backend is ready
+│   └── ChatWindow.tsx       # Full chat UI: message list, input, send logic
+│
+├── lib/
+│   └── api.ts               # sendMessage(message, threadId) — POST /chat wrapper
+│
+└── public/                  # Static assets (avatars, icons)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key design decisions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**AppLoader warmup pattern**  
+Because the backend runs on Render's free plan and scales to zero, `AppLoader` calls `POST /warmup` on mount and blocks the chat UI until the backend responds `{ status: "ready" }`. This hides the cold-start latency from the user.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Thread identity**  
+Each browser session generates a UUID (`threadId`) passed as `user_id` in every `/chat` request. The backend uses this to look up the per-user conversation memory.
 
-## Learn More
+**Markdown rendering**  
+Bot responses are rendered with `react-markdown` so the conversation agent can use headings, bullet points, and bold text.
 
-To learn more about Next.js, take a look at the following resources:
+## Running locally
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Set `NEXT_PUBLIC_API_URL` in `.env.local` to point at your local or remote backend:
 
-## Deploy on Vercel
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Other commands
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build   # Production build
+npm start       # Serve production build
+npm run lint    # ESLint
+```
+
+## Deployment
+
+Deployed on Vercel. The `NEXT_PUBLIC_API_URL` environment variable must be set in the Vercel project settings to the Render backend URL.
