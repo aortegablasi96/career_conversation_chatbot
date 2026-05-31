@@ -1,20 +1,19 @@
 import os
 import glob
+import pickle
+import shutil
 from pathlib import Path
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
+from langchain_community.retrievers import BM25Retriever
 
 from dotenv import load_dotenv
 
-MODEL = "gpt-4o-mini"
-
 DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
+BM25_PATH = Path(__file__).parent.parent / "storage" / "bm25_index.pkl"
 KNOWLEDGE_BASE = str(Path(__file__).parent.parent / "knowledge-base")
-
-# embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 load_dotenv(override=True)
 
@@ -37,9 +36,25 @@ def fetch_documents():
 
 
 def create_chunks(documents):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
-    chunks = text_splitter.split_documents(documents)
-    return chunks
+    header_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
+        strip_headers=False,
+    )
+    char_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+
+    all_chunks = []
+    for doc in documents:
+        header_splits = header_splitter.split_text(doc.page_content)
+        for split in header_splits:
+            split.metadata["doc_type"] = doc.metadata.get("doc_type", "")
+            split.metadata["source"] = doc.metadata.get("source", "")
+        char_splits = char_splitter.split_documents(header_splits)
+        all_chunks.extend(char_splits)
+
+    for i, chunk in enumerate(all_chunks):
+        chunk.metadata["chunk_id"] = f"{chunk.metadata.get('source', '')}::{i}"
+
+    return all_chunks
 
 
 def create_embeddings(chunks):
@@ -59,8 +74,17 @@ def create_embeddings(chunks):
     return vectorstore
 
 
+def save_bm25(chunks):
+    bm25 = BM25Retriever.from_documents(chunks)
+    with open(BM25_PATH, "wb") as f:
+        pickle.dump(bm25, f)
+    print(f"BM25 index saved to {BM25_PATH}")
+
+
 if __name__ == "__main__":
     documents = fetch_documents()
-    # chunks = create_chunks(documents) for now I do not want chunks
-    vectorstore = create_embeddings(documents)    
+    chunks = create_chunks(documents)
+    print(f"Created {len(chunks)} chunks from {len(documents)} documents")
+    vectorstore = create_embeddings(chunks)
+    save_bm25(chunks)
     print("Ingestion complete")

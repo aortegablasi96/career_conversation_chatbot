@@ -131,10 +131,6 @@ FINAL PRINCIPLE
 When in doubt → ASSUME VALID for Andreu Ortega.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
-
-
 class FilterOutput(BaseModel):
     """
     Structured output returned by the conversational filter agent.
@@ -225,7 +221,5 @@ filter_agent = Agent(
     name="FilterAgent",
     instructions=INSTRUCTIONS,
     model=MODEL,
-    output_type=FilterOutput  
+    output_type=FilterOutput
 )
-
-        

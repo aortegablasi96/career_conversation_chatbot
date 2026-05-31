@@ -1,7 +1,10 @@
 import uuid
 import asyncio
-from pydantic import BaseModel
-from fastapi import APIRouter
+import time
+from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+from cachetools import TTLCache
 
 from app.career_conversation_chatbot import ChatbotService
 
@@ -15,16 +18,31 @@ engine_ready = False
 engine_lock = asyncio.Lock()
 
 # -----------------------------
-# USER SESSIONS (lightweight)
+# USER SESSIONS (lightweight, TTL-evicted)
+# max 500 concurrent users, sessions expire after 1 hour of inactivity
 # -----------------------------
-sessions = {}
+sessions: TTLCache = TTLCache(maxsize=500, ttl=3600)
+
+# -----------------------------
+# RATE LIMITING
+# max 20 requests per user per minute
+# -----------------------------
+_rate_cache: TTLCache = TTLCache(maxsize=10000, ttl=60)
+
+def _check_rate_limit(user_id: str, max_per_minute: int = 20) -> bool:
+    bucket = f"{user_id}:{int(time.time() // 60)}"
+    count = _rate_cache.get(bucket, 0)
+    if count >= max_per_minute:
+        return False
+    _rate_cache[bucket] = count + 1
+    return True
 
 # -----------------------------
 # REQUEST MODEL
 # -----------------------------
 class ChatRequest(BaseModel):
     user_id: str
-    message: str
+    message: str = Field(max_length=2000)
 
 
 # -----------------------------
@@ -96,7 +114,14 @@ async def warmup():
 async def chat(req: ChatRequest):
 
     if not engine_ready:
-        return {"status": "warming_up"}
+        return JSONResponse(
+            status_code=503,
+            content={"status": "warming_up"},
+            headers={"Retry-After": "10"},
+        )
+
+    if not _check_rate_limit(req.user_id):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait before sending another message.")
 
     session = get_session(req.user_id)
 

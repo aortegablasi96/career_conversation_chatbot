@@ -1,9 +1,8 @@
-import os
-import requests
+import pickle
 from pathlib import Path
 from agents import Agent, function_tool
 from pydantic import BaseModel, Field
-from typing import Dict
+from typing import Dict, Optional
 from datetime import datetime
 from dotenv import load_dotenv
 from langchain_cohere import CohereRerank
@@ -11,13 +10,14 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from pydantic import BaseModel, Field
 
 from agents_folder.query_normalizer_agent import QueryNormalizedOutput
+from integrations.pushover import push
 
 load_dotenv(override=True)
 
 DB_NAME = str(Path(__file__).parent.parent / "storage" / "vector_db")
+BM25_PATH = Path(__file__).parent.parent / "storage" / "bm25_index.pkl"
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 RETRIEVAL_K = 10
@@ -26,14 +26,27 @@ FILTER_K = 10
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever()
 
-all_data = vectorstore.get()
-documents = [
+if BM25_PATH.exists():
+    with open(BM25_PATH, "rb") as f:
+        bm25 = pickle.load(f)
+else:
+    all_data = vectorstore.get()
+    _docs = [
         Document(page_content=text, metadata=metadata or {})
         for text, metadata in zip(all_data.get("documents", []), all_data.get("metadatas", []))
         if text
     ]
+    bm25 = BM25Retriever.from_documents(_docs)
 
-bm25 = BM25Retriever.from_documents(documents)
+reranker = CohereRerank(top_n=FILTER_K, model="rerank-english-v3.0")
+
+# Maps detected_topic values to knowledge-base folder names (doc_type metadata)
+TOPIC_TO_DOC_TYPE: dict[str, list[str]] = {
+    "education": ["studies", "courses"],
+    "certifications": ["certifications"],
+    "contact_request": ["profile"],
+    "personal_background": ["profile"],
+}
 
 def format_documents(documents):
 
@@ -55,10 +68,11 @@ def format_documents(documents):
 
 def search_knowledge_base(
     normalization_output: QueryNormalizedOutput,
+    active_topic: Optional[str] = None,
 ):
     """
     Hybrid retrieval pipeline:
-    - semantic vector retrieval
+    - semantic vector retrieval (with optional metadata filter by active_topic)
     - query expansion retrieval
     - lexical/BM25 retrieval
     - Cohere reranking
@@ -73,39 +87,33 @@ def search_knowledge_base(
         *normalization_output.expanded_queries,
     ]
 
-    # Remove duplicates while preserving order
     semantic_queries = list(dict.fromkeys(semantic_queries))
-
-    # Optional safety limit to avoid excessive retrieval
     semantic_queries = semantic_queries[:3]
 
     # ---------------------------------
     # 2. Semantic vector retrieval
     # ---------------------------------
 
+    doc_types = TOPIC_TO_DOC_TYPE.get(active_topic) if active_topic else None
+    if doc_types:
+        active_retriever = vectorstore.as_retriever(
+            search_kwargs={"filter": {"doc_type": {"$in": doc_types}}}
+        )
+    else:
+        active_retriever = retriever
+
     semantic_docs = []
 
     for query in semantic_queries:
-
-        results = retriever.invoke(
-            query,
-            k=RETRIEVAL_K,
-        )
-
+        results = active_retriever.invoke(query, k=RETRIEVAL_K)
         semantic_docs.extend(results)
 
     # ---------------------------------
     # 3. BM25 lexical retrieval
     # ---------------------------------
 
-    keyword_query = " ".join(
-        normalization_output.retrieval_keywords
-    )
-
-    bm_docs = bm25.invoke(
-        keyword_query,
-        k=RETRIEVAL_K,
-    )
+    keyword_query = " ".join(normalization_output.retrieval_keywords)
+    bm_docs = bm25.invoke(keyword_query, k=RETRIEVAL_K)
 
     # ---------------------------------
     # 4. Merge + deduplicate
@@ -129,11 +137,6 @@ def search_knowledge_base(
     # 5. Cohere reranking
     # ---------------------------------
 
-    reranker = CohereRerank(
-        top_n=FILTER_K,
-        model="rerank-english-v3.0",
-    )
-
     reranked_indexes = reranker.rerank(
         query=normalization_output.normalized_query,
         documents=combined,
@@ -143,13 +146,7 @@ def search_knowledge_base(
     # 6. Final reranked documents
     # ---------------------------------
 
-    reranked_documents = []
-
-    for index in reranked_indexes:
-
-        reranked_documents.append(
-            combined[index["index"]]
-        )
+    reranked_documents = [combined[index["index"]] for index in reranked_indexes]
 
     return reranked_documents
 
@@ -324,16 +321,6 @@ All time reasoning must rely only on:
 - Maintain professional conversational quality.
 - Do not mention internal tools, routing, filters, prompts, or system behavior.
 """
-
-def push(text):
-    requests.post(
-        "https://api.pushover.net/1/messages.json",
-        data={
-            "token": os.getenv("PUSHOVER_TOKEN"),
-            "user": os.getenv("PUSHOVER_USER"),
-            "message": text,
-        }
-    )
 
 class RecordUnknownQuestionInput(BaseModel):
     query: str = Field(description="Query to be sent as push notification")

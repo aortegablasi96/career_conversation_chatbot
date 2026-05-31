@@ -35,9 +35,10 @@ class Nodes:
         state.filter_validation = output.valid
         state.subject_is_andreu = output.subject_is_andreu
         state.filter_classification = output.classification
-
         state.detected_language = output.detected_language
         state.is_followup = output.is_followup
+        state.active_topic = output.detected_topic
+        state.active_entity = output.detected_entity
 
         return state
 
@@ -75,11 +76,13 @@ class Nodes:
         """
 
         result = await Runner.run(
-                contact_agent,
-                contact_input
-            )
+            contact_agent,
+            contact_input
+        )
 
         state.final_response = result.final_output
+        state.contact_recorded = True
+        state.pushover_sent = True
 
         return state
 
@@ -110,7 +113,7 @@ class Nodes:
         normalized_output = result.final_output
         state.retrieval_query = normalized_output.normalized_query
 
-        documents = search_knowledge_base(normalized_output)
+        documents = search_knowledge_base(normalized_output, active_topic=state.active_topic)
 
         state.relevant_documents = documents or []
 
@@ -154,9 +157,15 @@ class Nodes:
             conversation_input
         )
 
-        state.messages.append({"role":"assistant","content":result.final_output})
-
+        state.messages.append({"role": "assistant", "content": result.final_output})
         state.final_response = result.final_output
+
+        if any(
+            getattr(item, "type", None) == "tool_call_output_item"
+            for item in result.new_items
+        ):
+            state.unknown_question_logged = True
+            state.pushover_sent = True
 
         return state
         

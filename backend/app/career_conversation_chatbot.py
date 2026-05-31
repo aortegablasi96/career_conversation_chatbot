@@ -1,6 +1,5 @@
 import asyncio
 from agents import trace, gen_trace_id, Runner
-import gradio as gr
 from dotenv import load_dotenv
 
 from graph.graph import Graph
@@ -26,6 +25,7 @@ class ChatbotService:
         return results
     
 async def main(trace_id):
+    import gradio as gr
     app = ChatbotService(trace_id)
     await app.setup()
     gr.ChatInterface(app.chat).launch(inbrowser=True)

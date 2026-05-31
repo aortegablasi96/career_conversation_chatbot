@@ -1,10 +1,9 @@
-import os
-import requests
 from agents import Agent, function_tool
 from pydantic import BaseModel, Field
 from typing import Dict
-from datetime import datetime
 from dotenv import load_dotenv
+
+from integrations.pushover import push
 
 load_dotenv(override=True)
 
@@ -22,16 +21,6 @@ Your task:
 
 Keep response short and professional.
 """
-
-def push(text):
-    requests.post(
-        "https://api.pushover.net/1/messages.json",
-        data={
-            "token": os.getenv("PUSHOVER_TOKEN"),
-            "user": os.getenv("PUSHOVER_USER"),
-            "message": text,
-        }
-    )
 
 class RecordDetailsInput(BaseModel):
     email: str = Field(description="User email")

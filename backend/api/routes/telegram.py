@@ -1,11 +1,11 @@
 import os
 import traceback
-import uuid
+from collections import deque
 import httpx
 from fastapi import APIRouter, Request, BackgroundTasks
 
 from resources.start_messages import START_MESSAGES
-from app.career_conversation_chatbot import ChatbotService
+import api.routes.chatbot as chatbot_route
 
 router = APIRouter(prefix="/telegram")
 
@@ -14,19 +14,9 @@ MAX_MESSAGES = 20
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-processed_updates = set()
+# Bounded deque prevents unbounded memory growth from accumulated update IDs
+processed_updates: deque = deque(maxlen=1000)
 chat_histories: dict[str, list[dict]] = {}
-
-# simple in-memory session store (we improve later)
-sessions = {}
-
-async def get_or_create_session(user_id: str):
-    if user_id not in sessions:
-        trace_id = str(uuid.uuid4())
-        sessions[user_id] = ChatbotService(trace_id)
-        await sessions[user_id].setup()
-
-    return sessions[user_id]
 
 @router.post("/webhook")
 async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -41,7 +31,7 @@ async def process_telegram_update(data: dict):
         update_id = data.get("update_id")
         if update_id in processed_updates:
             return
-        processed_updates.add(update_id)
+        processed_updates.append(update_id)
 
         message = data.get("message", {})
         language_code = message.get("from", {}).get("language_code", "en")
@@ -52,31 +42,24 @@ async def process_telegram_update(data: dict):
         if not chat_id or not text:
             return {"ok": True}
 
-        history = chat_histories.get(chat_id, [])
-
-        bot = await get_or_create_session(chat_id)
-
         if text.strip().lower() == "/start":
             lang = language_code.lower().split("-")[0]
             start_text = START_MESSAGES.get(lang, START_MESSAGES["en"])
-
             await send_telegram_message(chat_id, start_text)
-
             return
-        
-        reply = await bot.chat(text, history)
 
-        history.extend([
-            {
-                "role": "user",
-                "content": text
-            },
-            {
-                "role": "assistant",
-                "content": reply
-            }
-        ])
-                
+        history = chat_histories.get(chat_id, [])
+
+        # Append user message before calling chat so the bot sees the full history
+        history = history + [{"role": "user", "content": text}]
+
+        if not chatbot_route.engine_ready:
+            await send_telegram_message(chat_id, "The assistant is still starting up. Please try again in a moment.")
+            return
+
+        reply = await chatbot_route.engine.chat(text, history)
+
+        history.append({"role": "assistant", "content": reply})
         chat_histories[chat_id] = history[-MAX_MESSAGES:]
 
         await send_telegram_message(chat_id, reply)
