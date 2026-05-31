@@ -4,17 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI-powered conversational chatbot representing Andreu Ortega as a professional persona. Uses RAG (Retrieval-Augmented Generation) with a LangGraph state machine, specialized OpenAI agents, and a hybrid vector + BM25 knowledge base. Supports multilingual queries (English, Spanish, Italian, Catalan).
+AI-powered conversational chatbot representing Andreu Ortega as a professional persona. Uses RAG (Retrieval-Augmented Generation) with a LangGraph state machine, specialized OpenAI Agents SDK agents, and a hybrid vector + BM25 knowledge base. Supports multilingual queries (English, Spanish, Italian, Catalan).
 
 ## Commands
 
-### Backend (Python, from repo root)
+### Backend (Python, from `backend/` directory)
 ```bash
 # Run backend dev server
 python -m uvicorn api.api_main:app --host 0.0.0.0 --port 8000 --reload
 
 # Rebuild vector knowledge base from markdown files
-python backend/data_pipeline/ingest.py
+python data_pipeline/ingest.py
 
 # Package manager: uv (uv.lock present) or pip
 pip install -r requirements.txt
@@ -28,70 +28,103 @@ npm run lint      # ESLint
 npm start         # Start production build
 ```
 
+### Local Gradio UI (for backend-only testing, from `backend/`)
+```bash
+python app/career_conversation_chatbot.py
+```
+
 ## Architecture
 
 ### Request Flow
 ```
-User message (Next.js) 
-  → POST /chat (FastAPI)
+User message (Next.js)
+  → AppLoader: POST /warmup (builds LangGraph engine once, on cold start)
+  → POST /chat (FastAPI, per-user session)
   → ChatbotService → LangGraph state machine
-      ├─ Filter Node: validates topic is about Andreu, classifies intent (info/contact)
-      ├─ Invalid Node: returns fallback response
-      ├─ Contact Node: collects user info, sends Pushover notification
-      └─ Conversation Node:
-            → Query Normalizer Agent (translate, expand follow-ups)
+      ├─ filter node: validates topic is about Andreu, classifies intent (info/contact)
+      ├─ invalid node: returns fixed fallback response
+      ├─ contact node: collects user info, sends Pushover notification
+      └─ info node:
+            → QueryNormalizerAgent (translate, expand follow-ups)
             → Hybrid retrieval (Chroma vector + BM25) + Cohere rerank
-            → Conversation Agent (generates response with context)
-  → Response streamed back to frontend
+            → ConversationAgent (generates response with context)
+  → JSON response back to frontend
 ```
 
-### Backend Structure (`api/` + `backend/`)
-- `api/api_main.py` — FastAPI app, CORS, routes, AppLoader warmup
-- `api/chatbot_service.py` — bridges HTTP requests to LangGraph engine
-- `backend/graph/` — LangGraph state machine: `graph.py`, `state.py`, nodes in `nodes/`
-- `backend/agents/` — OpenAI Agents SDK wrappers: filter, contact, query_normalizer, conversation
-- `backend/knowledge_base/` — hybrid retrieval: `vector_store.py`, `bm25_retriever.py`, `retriever.py`, `reranker.py`
-- `backend/data_pipeline/ingest.py` — parses markdown from `backend/knowledge-base/` and builds Chroma DB
-- `backend/storage/vector_db/` — persistent Chroma vector database (not committed)
-- `backend/telegram/` — Telegram bot webhook integration
+### Backend Structure (`backend/`)
+- `api/api_main.py` — FastAPI app, CORS, route registration
+- `api/routes/chatbot.py` — `/warmup` and `/chat` endpoints; global shared engine + lightweight per-user sessions
+- `api/routes/telegram.py` — Telegram webhook integration
+- `api/routes/app.py` — `/health` endpoint
+- `app/career_conversation_chatbot.py` — `ChatbotService` class; also launches Gradio UI when run directly
+- `graph/graph.py` — `Graph` class: builds LangGraph `StateGraph`, uses `MemorySaver` for checkpointing
+- `graph/nodes.py` — `Nodes` class: async methods for each graph node; imports and calls all four agents
+- `models/state.py` — Pydantic `State` model (13 fields) passed through the graph
+- `agents_folder/` — OpenAI Agents SDK agent definitions (one file per agent)
+- `data_pipeline/ingest.py` — loads markdown from `knowledge-base/`, embeds with `text-embedding-3-small`, stores in Chroma (no chunking currently)
+- `storage/vector_db/` — persistent Chroma vector database (not committed)
 
 ### Frontend Structure (`frontend/`)
 - Next.js 15 App Router with TypeScript
-- `src/app/` — pages and layout
-- `src/components/` — UI components (chat interface, AppLoader, messages)
-- `src/hooks/` — custom React hooks for chat state
-- `src/lib/` — API client utilities
-- Tailwind CSS 4, Framer Motion for animations
+- `app/layout.tsx` — wraps everything in `AppLoader` for warmup
+- `app/page.tsx` — renders `ChatWindow`
+- `components/AppLoader.tsx` — hits `/warmup` on mount, shows spinner until ready; hardcodes the Render URL
+- `components/ChatWindow.tsx` — full chat UI; manages messages, loading state, per-session UUID
+- `lib/api.ts` — `sendMessage()` using `NEXT_PUBLIC_API_URL`
+- Tailwind CSS 4, Framer Motion, ReactMarkdown + remark-gfm
 
-### State Machine (`backend/graph/state.py`)
-Pydantic model with ~13 fields tracking: query validation, intent classification, language, conversational context (topic/entity), retrieved documents, final response, and observability flags.
+### State Machine (`backend/models/state.py`)
+Pydantic `State` with fields: `query`, `messages`, `filter_validation`, `subject_is_andreu`, `filter_classification`, `detected_language`, `is_followup`, `retrieval_query`, `relevant_documents`, `active_topic`, `active_entity`, `final_response`, `unknown_question_logged`, `contact_recorded`, `pushover_sent`, `trace_id`.
+
+### Agents (`backend/agents_folder/`)
+All agents use the OpenAI Agents SDK (`from agents import Agent, Runner, function_tool`):
+
+| Agent | Model | Role |
+|---|---|---|
+| `filter_agent` | `gpt-4.1-nano` | Classifies intent, detects language/follow-up; structured `FilterOutput` |
+| `query_normalizer_agent` | `gpt-4.1-nano` | Translates + expands query for retrieval; structured `QueryNormalizedOutput` |
+| `contact_agent` | `gpt-4o-mini` | Collects contact info, calls `RecordUserDetailsTool` (Pushover) |
+| `conversation_agent` | `gpt-4o-mini` | Answers as Andreu using retrieved docs; calls `RecordQuestionsTool` for unknowns |
+
+### Hybrid Retrieval (in `agents_folder/conversation_agent.py`)
+Retrieval logic lives alongside the conversation agent, not in a separate module:
+1. Semantic vector search via Chroma (up to 3 query variants × K results)
+2. BM25 lexical search on `retrieval_keywords`
+3. Merge + deduplicate by `chunk_id` or `source` metadata
+4. Cohere `rerank-english-v3.0` reranking (top 10)
 
 ### Knowledge Base
-Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline chunks these into Chroma with OpenAI `text-embedding-3-small` embeddings.
+Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline embeds whole documents (chunking is disabled) into Chroma with `text-embedding-3-small` embeddings.
+
+## Engine / Session Architecture
+
+The backend uses a two-tier pattern to avoid rebuilding LangGraph on every request:
+- **Global engine** (`ChatbotService` + `Graph`): built once on `/warmup`, shared across all users
+- **Per-user session**: lightweight dict with `trace_id` (UUID) and `memory` (last 8 messages). The `trace_id` doubles as the LangGraph `thread_id` for `MemorySaver` checkpointing.
 
 ## Environment Variables
 
-**Backend** (`.env` in repo root):
+**Backend** (`.env` in `backend/`):
 - `OPENAI_API_KEY` — LLM and embeddings
 - `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` — agent observability
 - `COHERE_API_KEY` — retrieval reranking
-- `PUSHOVER_USER`, `PUSHOVER_TOKEN` — contact request notifications
+- `PUSHOVER_USER`, `PUSHOVER_TOKEN` — contact request and unknown question notifications
 - `BOT_TOKEN` — Telegram bot
-- `SENDGRID_API_KEY` — email
 
 **Frontend** (`frontend/.env.local`):
-- `NEXT_PUBLIC_API_URL` — backend URL (defaults to Render deployment)
+- `NEXT_PUBLIC_API_URL` — backend URL (used by `lib/api.ts`; AppLoader hardcodes Render URL separately)
 
 ## Deployment
 
-- **Backend**: Render (configured via `render.yaml`, free plan, auto-scales to zero)
+- **Backend**: Render (configured via `backend/render.yaml`, free plan, auto-scales to zero). Start command: `python -m uvicorn api.api_main:app --host 0.0.0.0 --port $PORT`
 - **Frontend**: Vercel
-- **AppLoader pattern**: Frontend pre-warms the backend on load to mitigate cold starts on free Render tier
-- **CORS origins**: localhost:3000, Render backend, Vercel frontend domains
+- **AppLoader pattern**: Frontend hits `/warmup` on page load to pre-warm the backend before showing the chat UI, mitigating Render cold starts
+- **CORS origins**: `localhost:3000`, `career-conversation-chatbot.onrender.com`, `career-conversation-chatbot.vercel.app`
 
 ## Key Design Decisions
 
-- **Conversation memory**: 8-message sliding window stored in-memory per session (keyed by trace ID)
-- **Multilingual**: Query Normalizer Agent translates non-English queries to English before retrieval, responds in the user's language
-- **Follow-up handling**: Normalizer also expands ambiguous follow-up queries using conversation context before retrieval
-- **Hybrid retrieval**: Combines dense (Chroma + OpenAI embeddings) and sparse (BM25) retrieval, reranked by Cohere
+- **Conversation memory**: 8-message sliding window in the per-user session dict; passed as `history` into each `run_superstep` call
+- **Multilingual**: QueryNormalizerAgent translates non-English queries to English before retrieval; ConversationAgent responds in the user's detected language
+- **Follow-up handling**: FilterAgent sets `is_followup`; QueryNormalizerAgent resolves ambiguous references using `active_topic` / `active_entity` from state
+- **No chunking**: ingest currently stores whole markdown documents as single vectors (the `create_chunks` call in `ingest.py` is commented out)
+- **Pushover for observability**: both unknown questions and contact requests trigger Pushover push notifications in real time
