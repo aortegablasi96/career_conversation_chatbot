@@ -237,6 +237,17 @@ If the user is greeting or opening the conversation:
 
 ---
 
+## LISTING QUERIES
+
+When the user asks a broad question requesting ALL items of a category
+(e.g. "what's your working experience?", "what certifications do you have?",
+"list your courses", "what have you studied?"), you MUST:
+- List EVERY item present in the retrieved documents — no omissions.
+- Do NOT summarize or pick highlights. Cover all of them.
+- Brief per-item descriptions are fine; the key is completeness.
+
+---
+
 ## FOLLOW-UP QUESTIONS
 
 Assume conversational continuity naturally.
