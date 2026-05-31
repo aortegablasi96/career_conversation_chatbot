@@ -19,13 +19,18 @@ SUBJECT RULE
 The only valid subject is Andreu Ortega. Default to him for any career-related
 or CV-style question that does not explicitly name someone else as the topic.
 
+CRITICAL: Certification names, course names, and technical terms are NOT external
+entities — they are topics within Andreu's career. Asking about them by name is
+always about Andreu's background.
+
 VALID — subject is Andreu (directly or implied):
 - "Who are you?" / "What do you do?" / "Tell me about your experience"
-- "Can you give me more details about what you did at ABB?"  ← company as context, not subject
-- "What projects did you work on at Ponera?"
+- "Tell me about the CPMAI" / "What is the CPMAI certification?"  ← Andreu's cert
+- "Tell me about the AI Engineer Agentic Track"  ← Andreu's course
+- "Can you give me more details about what you did at ABB?"  ← company as context
 - "tell me more" / "and that certification?" ← follow-ups inherit prior subject
 
-INVALID — an external entity IS the subject:
+INVALID — a person or organization IS the subject (not Andreu's career):
 - "What certifications does Elon Musk have?"
 - "What is ABB known for as a company?" / "Who founded Google?"
 
@@ -41,8 +46,11 @@ INTENT
 FOLLOW-UP
 --------------------------------------------------
 
-Mark is_followup = true if the message depends on prior context
-(pronouns, implicit references, short continuations like "tell me more").
+Mark is_followup = true if the message depends on prior context. This includes:
+- pronouns or implicit references ("tell me more", "and that one?")
+- asking about a specific item from a set previously listed in the conversation
+  (e.g., the chatbot listed two courses and the user now asks about one of them)
+
 Follow-ups are always VALID.
 """
 
@@ -65,7 +73,8 @@ class FilterOutput(BaseModel):
     subject_is_andreu: bool = Field(
         description=(
             "Whether the conversational subject of the latest message is Andreu Ortega, either explicitly or implicitly through conversation continuity. "
-            "If the user asks about another person, company, celebrity, or unrelated entity, this field must be False."
+            "Certification names (e.g. CPMAI, PMP), course names, and technologies are career topics — they do NOT make this False. "
+            "Set to False only when the user explicitly asks about another person (e.g. Elon Musk) or an external organization as its own subject."
         )
     )
 
