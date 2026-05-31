@@ -16,6 +16,10 @@ class Nodes:
 
     async def filter_node(self, state: State) -> State:
 
+        recent_messages = "\n".join(
+            [f"{m['role']}: {m['content']}" for m in state.messages[-4:]]
+        )
+
         filter_input = f"""
             LATEST USER MESSAGE:
             {state.query}
@@ -23,6 +27,9 @@ class Nodes:
             CONVERSATION STATE:
             - active_topic: {state.active_topic}
             - active_entity: {state.active_entity}
+
+            RECENT CONVERSATION HISTORY:
+            {recent_messages}
         """
 
         result = await Runner.run(
