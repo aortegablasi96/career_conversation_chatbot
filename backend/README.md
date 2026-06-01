@@ -88,6 +88,55 @@ START → filter → [invalid | contact | info] → END
 | `final_response` | whichever terminal node executes |
 | `contact_recorded`, `pushover_sent`, `unknown_question_logged` | contact / conversation nodes |
 
+## Agent workflow
+
+Each graph node delegates to one or more OpenAI Agents SDK agents. All agents use structured outputs via Pydantic models and are invoked with `Runner.run()`.
+
+```
+filter node
+  └─ FilterAgent (gpt-4.1-nano)
+       Reads: query, messages (history), active_topic, active_entity
+       Writes: filter_validation, filter_classification, detected_language,
+               is_followup, active_topic, active_entity
+
+       ┌── filter_validation == False ──► invalid node
+       │                                    └─ (no agent) returns a localised
+       │                                       fallback from invalid_messages.py
+       │
+       ├── filter_classification == "contact" ──► contact node
+       │                                           └─ ContactAgent (gpt-4o-mini)
+       │                                                Multi-turn: collects name,
+       │                                                email, phone, and message.
+       │                                                Calls RecordUserDetailsTool
+       │                                                → Pushover notification.
+       │
+       └── filter_classification == "info" ──► info node
+                                                ├─ QueryNormalizerAgent (gpt-4.1-nano)
+                                                │    Reads: query, detected_language,
+                                                │           is_followup, active_topic,
+                                                │           active_entity, messages
+                                                │    Writes: retrieval_query +
+                                                │            expanded query variants
+                                                │            (all in English)
+                                                │
+                                                └─ ConversationAgent (gpt-4o-mini)
+                                                     Reads: retrieval_query, relevant_documents,
+                                                            detected_language, messages
+                                                     Runs hybrid retrieval internally
+                                                     (see Retrieval pipeline below)
+                                                     Calls RecordQuestionsTool for
+                                                     unanswerable queries → Pushover.
+                                                     Writes: final_response
+```
+
+**FilterAgent** is the entry point for every request. It decides whether the message is relevant (about Andreu), classifies it as an information or contact request, detects the user's language, and resolves follow-up references (`active_topic` / `active_entity`) so downstream agents have the conversation context they need.
+
+**QueryNormalizerAgent** runs only on the info path. It translates non-English queries to English and, for follow-ups, rewrites the query into a fully self-contained retrieval string by resolving pronouns and ellipsis against the current `active_topic` and `active_entity`.
+
+**ConversationAgent** owns both retrieval and response generation. It calls `search_knowledge_base()` internally, receives the ranked documents, then generates a reply in the user's detected language. It never fabricates — if the answer is not in the retrieved documents it calls `RecordQuestionsTool` to log the gap and responds accordingly.
+
+**ContactAgent** runs a conversational loop across multiple turns to collect the user's contact details before firing a Pushover push notification.
+
 ## Retrieval pipeline
 
 Implemented in `agents_folder/conversation_agent.py → search_knowledge_base()`:
