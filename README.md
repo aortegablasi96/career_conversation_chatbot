@@ -25,7 +25,7 @@ User message (Next.js frontend)
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 4 |
 | API | FastAPI |
 | Orchestration | LangGraph |
-| Agents | OpenAI Agents SDK (gpt-4o-mini) |
+| Agents | OpenAI Agents SDK (gpt-4.1-nano / gpt-4o-mini) |
 | Embeddings | OpenAI text-embedding-3-small |
 | Vector DB | Chroma |
 | Retrieval | Hybrid semantic + BM25, reranked by Cohere |
@@ -90,7 +90,6 @@ npm run dev
 | `PUSHOVER_USER` | Pushover user key |
 | `PUSHOVER_TOKEN` | Pushover app token |
 | `BOT_TOKEN` | Telegram bot token |
-| `SENDGRID_API_KEY` | Email integration |
 
 ### Frontend (`frontend/.env.local`)
 
@@ -102,4 +101,4 @@ npm run dev
 
 - **Backend**: Render (free plan, configured via `render.yaml`). Scales to zero when idle.
 - **Frontend**: Vercel.
-- **Cold-start mitigation**: The `AppLoader` component calls `POST /warmup` before showing the chat UI, so the Render instance is warm by the time the user types their first message.
+- **Cold-start mitigation**: The `AppLoader` component calls `POST /warmup` before showing the chat UI. It retries up to 5 times with exponential backoff (3 s, 6 s, 12 s, 24 s) and renders a visible error state with a Refresh button if all attempts fail. The chat input is disabled until warmup succeeds.
