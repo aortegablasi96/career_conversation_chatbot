@@ -21,16 +21,19 @@ async def _register_telegram_webhook() -> None:
         print("TELEGRAM: skipping webhook registration — no base URL configured")
         return
     webhook_url = f"{base_url.rstrip('/')}/telegram/webhook"
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"https://api.telegram.org/bot{bot_token}/setWebhook",
-            json={"url": webhook_url},
-        )
-    result = resp.json()
-    if result.get("ok"):
-        print(f"TELEGRAM: webhook registered → {webhook_url}")
-    else:
-        print(f"TELEGRAM: webhook registration failed — {result}")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{bot_token}/setWebhook",
+                json={"url": webhook_url},
+            )
+        result = resp.json()
+        if result.get("ok"):
+            print(f"TELEGRAM: webhook registered → {webhook_url}")
+        else:
+            print(f"TELEGRAM: webhook registration failed — {result}")
+    except Exception as e:
+        print(f"TELEGRAM: webhook registration error — {e}")
 
 
 @asynccontextmanager

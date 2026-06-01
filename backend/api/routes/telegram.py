@@ -57,8 +57,13 @@ async def process_telegram_update(data: dict):
         history = history + [{"role": "user", "content": text}]
 
         if not chatbot_route.engine_ready:
-            await send_telegram_message(chat_id, "The assistant is still starting up. Please try again in a moment.")
-            return
+            await send_telegram_message(chat_id, "Starting up the assistant, please wait a moment...")
+            try:
+                await chatbot_route.ensure_engine_ready()
+            except Exception as e:
+                print(f"TELEGRAM: engine warmup failed — {e}")
+                await send_telegram_message(chat_id, "Sorry, the assistant failed to start. Please try again in a moment.")
+                return
 
         reply = await chatbot_route.engine.chat(text, history)
 
