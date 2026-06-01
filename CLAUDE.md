@@ -8,30 +8,31 @@ AI-powered conversational chatbot representing Andreu Ortega as a professional p
 
 ## Commands
 
-### Backend (Python, from `backend/` directory)
+### Backend (Python 3.11.9, from `backend/` directory)
 ```bash
+# Install dependencies (uv preferred; pip also works)
+uv sync                        # preferred — respects uv.lock
+pip install -r requirements.txt  # fallback
+
 # Run backend dev server
 python -m uvicorn api.api_main:app --host 0.0.0.0 --port 8000 --reload
 
 # Rebuild vector knowledge base from markdown files
 python data_pipeline/ingest.py
 
-# Package manager: uv (uv.lock present) or pip
-pip install -r requirements.txt
+# Local Gradio UI (backend-only testing, no frontend needed)
+python app/career_conversation_chatbot.py
 ```
 
 ### Frontend (Next.js, from `frontend/` directory)
 ```bash
 npm run dev       # Dev server on localhost:3000
 npm run build     # Production build
-npm run lint      # ESLint
+npm run lint      # ESLint (eslint-config-next/core-web-vitals + typescript)
 npm start         # Start production build
 ```
 
-### Local Gradio UI (for backend-only testing, from `backend/`)
-```bash
-python app/career_conversation_chatbot.py
-```
+There is no test suite for either backend or frontend.
 
 ## Architecture
 
@@ -52,14 +53,14 @@ User message (Next.js)
 ```
 
 ### Backend Structure (`backend/`)
-- `api/api_main.py` — FastAPI app, CORS, route registration
+- `api/api_main.py` — FastAPI app, CORS, router registration
 - `api/routes/chatbot.py` — `/warmup` and `/chat` endpoints; global shared engine + lightweight per-user sessions
 - `api/routes/telegram.py` — Telegram webhook integration
 - `api/routes/app.py` — `/health` endpoint
 - `app/career_conversation_chatbot.py` — `ChatbotService` class; also launches Gradio UI when run directly
 - `graph/graph.py` — `Graph` class: builds LangGraph `StateGraph`, uses `MemorySaver` for checkpointing
 - `graph/nodes.py` — `Nodes` class: async methods for each graph node; imports and calls all four agents
-- `models/state.py` — Pydantic `State` model (13 fields) passed through the graph
+- `models/state.py` — Pydantic `State` model passed through the graph
 - `agents_folder/` — OpenAI Agents SDK agent definitions (one file per agent)
 - `data_pipeline/ingest.py` — loads markdown from `knowledge-base/`, embeds with `text-embedding-3-small`, stores in Chroma (no chunking currently)
 - `storage/vector_db/` — persistent Chroma vector database (not committed)
@@ -68,39 +69,59 @@ User message (Next.js)
 - Next.js 15 App Router with TypeScript
 - `app/layout.tsx` — wraps everything in `AppLoader` for warmup
 - `app/page.tsx` — renders `ChatWindow`
-- `components/AppLoader.tsx` — hits `/warmup` on mount, shows spinner until ready; hardcodes the Render URL
+- `components/AppLoader.tsx` — hits `/warmup` on mount, shows spinner until ready; **hardcodes the Render backend URL** (change this when developing against a local backend)
 - `components/ChatWindow.tsx` — full chat UI; manages messages, loading state, per-session UUID
 - `lib/api.ts` — `sendMessage()` using `NEXT_PUBLIC_API_URL`
 - Tailwind CSS 4, Framer Motion, ReactMarkdown + remark-gfm
 
 ### State Machine (`backend/models/state.py`)
-Pydantic `State` with fields: `query`, `messages`, `filter_validation`, `subject_is_andreu`, `filter_classification`, `detected_language`, `is_followup`, `retrieval_query`, `relevant_documents`, `active_topic`, `active_entity`, `final_response`, `unknown_question_logged`, `contact_recorded`, `pushover_sent`, `trace_id`.
+Pydantic `State` with 16 fields passed through the entire graph:
+
+| Field | Set by |
+|---|---|
+| `query` | Caller |
+| `messages` | Caller (8-message window) |
+| `filter_validation` | filter node |
+| `subject_is_andreu` | filter node |
+| `filter_classification` | filter node (`"info"` / `"contact"`) |
+| `detected_language` | filter node |
+| `is_followup` | filter node |
+| `active_topic` / `active_entity` | filter node |
+| `retrieval_query` | info node (after normalisation) |
+| `relevant_documents` | info node (after hybrid retrieval) |
+| `final_response` | whichever terminal node executes |
+| `unknown_question_logged` | conversation node |
+| `contact_recorded` / `pushover_sent` | contact node |
+| `trace_id` | Caller (doubles as LangGraph `thread_id`) |
 
 ### Agents (`backend/agents_folder/`)
-All agents use the OpenAI Agents SDK (`from agents import Agent, Runner, function_tool`):
+All agents use the OpenAI Agents SDK (`from agents import Agent, Runner, function_tool`) with Pydantic structured outputs:
 
 | Agent | Model | Role |
 |---|---|---|
-| `filter_agent` | `gpt-4.1-nano` | Classifies intent, detects language/follow-up; structured `FilterOutput` |
+| `filter_agent` | `gpt-4.1-nano` | Classifies intent, detects language/follow-up; structured `FilterOutput`; uses in-memory prompt caching |
 | `query_normalizer_agent` | `gpt-4.1-nano` | Translates + expands query for retrieval; structured `QueryNormalizedOutput` |
 | `contact_agent` | `gpt-4o-mini` | Collects contact info, calls `RecordUserDetailsTool` (Pushover) |
 | `conversation_agent` | `gpt-4o-mini` | Answers as Andreu using retrieved docs; calls `RecordQuestionsTool` for unknowns |
 
 ### Hybrid Retrieval (in `agents_folder/conversation_agent.py`)
 Retrieval logic lives alongside the conversation agent, not in a separate module:
-1. Semantic vector search via Chroma (up to 3 query variants × K results)
+1. Semantic vector search via Chroma (up to 3 query variants × K results); applies `doc_type` metadata filter via `TOPIC_TO_DOC_TYPE` when `active_topic` is set
 2. BM25 lexical search on `retrieval_keywords`
-3. Merge + deduplicate by `chunk_id` or `source` metadata
-4. Cohere `rerank-english-v3.0` reranking (top 10)
+3. All queries run concurrently via `asyncio.gather()`
+4. Merge + deduplicate by `chunk_id` or `source` metadata
+5. Cohere `rerank-english-v3.0` reranking (top 15, `FILTER_K=15`)
 
 ### Knowledge Base
-Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline embeds whole documents (chunking is disabled) into Chroma with `text-embedding-3-small` embeddings.
+Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline prepends a `[Category: {doc_type} | Document: {name}]` prefix before embedding, stores whole documents as single vectors (no chunking), and serialises the BM25 index to `storage/bm25_index.pkl`. Both storage artifacts are gitignored.
 
 ## Engine / Session Architecture
 
 The backend uses a two-tier pattern to avoid rebuilding LangGraph on every request:
 - **Global engine** (`ChatbotService` + `Graph`): built once on `/warmup`, shared across all users
-- **Per-user session**: lightweight dict with `trace_id` (UUID) and `memory` (last 8 messages). The `trace_id` doubles as the LangGraph `thread_id` for `MemorySaver` checkpointing.
+- **Per-user session**: lightweight dict with `trace_id` (UUID) and `memory` (last 8 messages), stored in a `TTLCache(maxsize=500, ttl=3600)` — sessions expire after 1 hour of inactivity
+
+The `trace_id` doubles as the LangGraph `thread_id` for `MemorySaver` checkpointing.
 
 ## Environment Variables
 
@@ -110,13 +131,14 @@ The backend uses a two-tier pattern to avoid rebuilding LangGraph on every reque
 - `COHERE_API_KEY` — retrieval reranking
 - `PUSHOVER_USER`, `PUSHOVER_TOKEN` — contact request and unknown question notifications
 - `BOT_TOKEN` — Telegram bot
+- `TELEGRAM_WEBHOOK_URL` — optional override for Telegram webhook base URL (defaults to Render's `RENDER_EXTERNAL_URL`; set this when testing locally via ngrok)
 
 **Frontend** (`frontend/.env.local`):
-- `NEXT_PUBLIC_API_URL` — backend URL (used by `lib/api.ts`; AppLoader hardcodes Render URL separately)
+- `NEXT_PUBLIC_API_URL` — backend URL (used by `lib/api.ts`; `AppLoader.tsx` hardcodes the Render URL separately)
 
 ## Deployment
 
-- **Backend**: Render (configured via `backend/render.yaml`, free plan, auto-scales to zero). Start command: `python -m uvicorn api.api_main:app --host 0.0.0.0 --port $PORT`
+- **Backend**: Render (configured via `backend/render.yaml`, free plan, auto-scales to zero). Build: `pip install -r requirements.txt`. Start: `python -m uvicorn api.api_main:app --host 0.0.0.0 --port $PORT`
 - **Frontend**: Vercel
 - **AppLoader pattern**: Frontend hits `/warmup` on page load to pre-warm the backend before showing the chat UI, mitigating Render cold starts
 - **CORS origins**: `localhost:3000`, `career-conversation-chatbot.onrender.com`, `career-conversation-chatbot.vercel.app`
