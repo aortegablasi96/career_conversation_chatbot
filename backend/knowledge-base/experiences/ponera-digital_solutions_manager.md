@@ -1,4 +1,4 @@
-# Experience: Junior Digital Solutions Manager at Ponera Group AG
+# Experience: Digital Solutions Manager at Ponera Group AG
 
 **Location:** Lugano, Switzerland  
 **Duration:** From June 2023 to October 2024
