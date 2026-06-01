@@ -14,6 +14,8 @@ state.active_topic = output.detected_topic
 state.active_entity = output.detected_entity
 ```
 
+> ✅ **Fixed:** Added `state.active_topic = output.detected_topic` and `state.active_entity = output.detected_entity` in `filter_node` in `nodes.py` (lines 47–48). Both fields are now populated on every turn from the `FilterOutput` structured response. `nodes.py` line 123 passes `state.active_topic` to `search_knowledge_base()`, and lines 146/149 inject both into the conversation agent context.
+
 ---
 
 ### 2. Document chunking is disabled — retrieval quality is degraded
@@ -25,11 +27,15 @@ vectorstore = create_embeddings(documents)
 ```
 Entire markdown documents are stored as single embeddings. Long documents exceed the optimal embedding context window, producing noisy, low-precision vectors. The BM25 retriever is also built from whole documents, reducing lexical precision.
 
+> ✅ **Fixed (differently than originally described):** Chunking was not re-enabled. Instead, `create_chunks()` was replaced by `enrich_documents()` in `ingest.py` — each of the 30 markdown files is stored as a single vector with no splitting. A `[Category: {doc_type} | Document: {clean_name}]` prefix is prepended before embedding so every document is self-identifying, and a `chunk_id` (`source::0`) is assigned for deduplication compatibility. To compensate for the no-chunking approach, 23 knowledge-base markdown files were restructured — flattened to a single `#` top-level header per entity with `**Bold:**` inline field labels — so each document is a semantically coherent unit rather than a collection of disconnected field-level fragments.
+
 ---
 
 ### 3. Warmup URL is hardcoded in `AppLoader.tsx`
 
 `AppLoader.tsx` line 14 hardcodes `https://career-conversation-chatbot.onrender.com/warmup` instead of using `process.env.NEXT_PUBLIC_API_URL`. Any staging environment, local dev, or URL change is silently ignored — `AppLoader` always hits production.
+
+> ✅ **Fixed:** Replaced the hardcoded Render URL with `` `${process.env.NEXT_PUBLIC_API_URL}/warmup` `` in `AppLoader.tsx`. The component now respects the configured environment variable for all environments (local dev, staging, production).
 
 ---
 
@@ -37,11 +43,15 @@ Entire markdown documents are stored as single embeddings. Long documents exceed
 
 The `catch` block in `AppLoader.tsx` is empty (`// optional retry logic`). If the warmup request fails (Render timeout, network error, 500), `ready` is never set to `true`, the loading spinner never disappears, and the user is permanently locked out with no message.
 
+> ✅ **Fixed:** `attemptWarmup()` is called in a loop with up to 5 total attempts (`MAX_RETRIES = 4`) and exponential backoff (`BASE_DELAY_MS = 3000`): delays of 3 s, 6 s, 12 s, 24 s between attempts. If all attempts fail, `setError(true)` triggers an "Unable to connect to the assistant" error state with a Refresh button (`window.location.reload()`). The infinite spinner is no longer possible.
+
 ---
 
 ### 5. `warming_up` response is not handled on the frontend
 
 `POST /chat` returns `{ "status": "warming_up" }` when the engine is not ready. `sendMessage` in `lib/api.ts` checks only `response.ok` (HTTP 200), so it passes this through. `ChatWindow` then reads `response.reply`, which is `undefined`, and renders a broken assistant message.
+
+> ✅ **Fixed:** `lib/api.ts` now exports `WarmingUpError` (thrown on HTTP 503) and `RateLimitError` (thrown on HTTP 429) before the generic `response.ok` check. `ChatWindow.handleSend` catches each error class and renders a specific inline assistant message — "The assistant is still starting up…" for 503 and "You're sending messages too quickly…" for 429 — instead of a blank or broken message.
 
 ---
 
@@ -49,11 +59,15 @@ The `catch` block in `AppLoader.tsx` is empty (`// optional retry logic`). If th
 
 `telegram.py → get_or_create_session()` calls `ChatbotService(trace_id)` and `await sessions[user_id].setup()` for every new Telegram user. This rebuilds the LangGraph graph and reloads all tools for each user, unlike the HTTP route which shares a single global engine. With multiple Telegram users this causes redundant memory usage and slow first-message latency per user.
 
+> ✅ **Fixed:** Removed per-user `ChatbotService` instantiation from `telegram.py`. The module now imports `api.routes.chatbot as chatbot_route` and accesses `chatbot_route.engine` / `chatbot_route.engine_ready` at call time (deferred import avoids capturing `None` at module load). Per-user conversation history is still managed locally by `chat_histories`.
+
 ---
 
 ### 7. `processed_updates` set grows unbounded in Telegram route
 
 `processed_updates = set()` in `telegram.py` accumulates every Telegram `update_id` and is never cleaned up. On a long-running instance this is a slow memory leak.
+
+> ✅ **Fixed:** Replaced `processed_updates = set()` with `collections.deque(maxlen=1000)`. `processed_updates.add(update_id)` changed to `processed_updates.append(update_id)`. The `in` operator works identically on deques, so the duplicate-check logic is unchanged. The store is now bounded to the 1000 most recent update IDs.
 
 ---
 
@@ -61,11 +75,15 @@ The `catch` block in `AppLoader.tsx` is empty (`// optional retry logic`). If th
 
 Both `chatbot.py` (`sessions` dict) and `telegram.py` (`sessions`, `chat_histories`) are plain in-memory dicts with no eviction and no persistence. On Render's free plan, the server restarts frequently. Every restart wipes all active sessions and conversation history.
 
+> ⚠️ **Partially fixed:** `chatbot.py` `sessions` replaced with `TTLCache(maxsize=500, ttl=3600)` — sessions now expire after 1 hour of inactivity and the store is bounded to 500 concurrent users. `telegram.py` `chat_histories` is still a plain `dict` with no eviction. Neither store persists across server restarts — data is still lost on every Render cold start. Full persistence (e.g. Redis) was out of scope for this revision.
+
 ---
 
 ### 9. `push()` utility is duplicated across two agents
 
 `contact_agent.py` and `conversation_agent.py` each define an identical `push()` function that calls the Pushover API. Any change to the notification logic (auth, message format, endpoint) must be made twice.
+
+> ✅ **Fixed:** Created `backend/integrations/pushover.py` with a single `async def push(text)` using `httpx.AsyncClient`. Both `contact_agent.py` and `conversation_agent.py` now import `push` from `integrations.pushover`. Their local `push()` definitions and redundant `import os` / `import requests` lines were removed.
 
 ---
 
@@ -73,17 +91,23 @@ Both `chatbot.py` (`sessions` dict) and `telegram.py` (`sessions`, `chat_histori
 
 `ChatWindow.tsx` imports from `"framer-motion"` and `"remark-gfm"`, but neither appears in `frontend/package.json` dependencies or devDependencies. They currently work as transitive dependencies of another package, but a clean `npm install` on a different environment may not include them, causing a build failure.
 
+> ✅ **Fixed:** Added `"framer-motion": "^11.18.2"` and `"remark-gfm": "^4.0.1"` to `dependencies` in `frontend/package.json`. Both packages are now explicitly declared and guaranteed to be installed on a clean `npm install`.
+
 ---
 
 ### 11. Duplicate import in `filter_agent.py`
 
 `from typing import Literal, Optional` is imported twice — at line 1 and again at line 133 (inside the same file, after the agent instructions string).
 
+> ✅ **Fixed:** Removed the duplicate `from typing import Literal, Optional` and `from pydantic import BaseModel, Field` block that appeared after the `INSTRUCTIONS` string. Both imports now appear exactly once at the top of the file.
+
 ---
 
 ### 12. No input length validation or rate limiting
 
 `POST /chat` accepts any message string with no length cap and no rate limiting. A malicious user can submit very long inputs or flood the endpoint, consuming OpenAI API credits with no protection.
+
+> ✅ **Fixed:** Two independent protections added to `chatbot.py`. **Length validation:** `ChatRequest.message` is declared as `Field(max_length=2000)` — Pydantic rejects inputs over 2000 characters with HTTP 422 before the handler is reached. **Rate limiting:** `_check_rate_limit()` uses a `TTLCache(maxsize=10000, ttl=60)` keyed by `"{user_id}:{minute_bucket}"`, capped at 20 requests per minute per user; exceeding the limit returns HTTP 429. No additional dependency was needed — `cachetools` was already in `requirements.txt`.
 
 ---
 
@@ -94,6 +118,8 @@ When a user asks "list all your working experiences", the filter agent correctly
 **Fix:**
 1. Add `"career": ["experiences"]` and `"projects": ["experiences"]` to `TOPIC_TO_DOC_TYPE`.
 2. Raise `FILTER_K` from 10 → 15 to give the reranker enough headroom above the largest single category (9 courses).
+
+> ✅ **Fixed:** Added `"career": ["experiences"]` and `"projects": ["experiences"]` to `TOPIC_TO_DOC_TYPE` in `conversation_agent.py`. Both `FILTER_K` and `RETRIEVAL_K` raised from 10 → 15 — the reranker now has comfortable headroom above the largest single category (9 courses). `RETRIEVAL_K` is correctly wired into all three retriever constructions: global retriever via `search_kwargs={"k": RETRIEVAL_K}`, topic-filtered retriever via `search_kwargs={"k": RETRIEVAL_K, "filter": ...}`, and `bm25.k = RETRIEVAL_K`.
 
 ---
 
