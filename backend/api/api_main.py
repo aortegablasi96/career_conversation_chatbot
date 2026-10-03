@@ -50,6 +50,7 @@ app.add_middleware(
         "http://localhost:3000",
         "https://career-conversation-chatbot.onrender.com",
         "https://career-conversation-chatbot.vercel.app",
+        "https://andreuortegablasi.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
