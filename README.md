@@ -102,3 +102,24 @@ npm run dev
 - **Backend**: Render (free plan, configured via `render.yaml`). Scales to zero when idle.
 - **Frontend**: Vercel.
 - **Cold-start mitigation**: The `AppLoader` component calls `POST /warmup` before showing the chat UI. It retries up to 5 times with exponential backoff (3 s, 6 s, 12 s, 24 s) and renders a visible error state with a Refresh button if all attempts fail. The chat input is disabled until warmup succeeds.
+
+## Callers and allowed origins
+
+The API is called from browsers by two sites, so `backend/api/api_main.py` allows their origins in `CORSMiddleware`:
+
+| Origin | Who calls it |
+|---|---|
+| `https://career-conversation-chatbot.vercel.app` | This repository's frontend |
+| `https://career-conversation-chatbot.onrender.com` | The API's own address |
+| `https://andreuortegablasi.com` | The career site ([aortegablasi96/career-site](https://github.com/aortegablasi96/career-site)), whose chat is on every page |
+| `https://career-site-*-andreus-projects-f43ec5ad.vercel.app` | The career site's Vercel previews, matched by `allow_origin_regex` |
+| `http://localhost:3000` | Local development of either frontend |
+
+`allow_origins` matches exact addresses only; a `*` inside an address there is not a wildcard. The previews' pattern is therefore `allow_origin_regex`, `^https://career-site-[a-z0-9-]+-andreus-projects-f43ec5ad\.vercel\.app$`, which pins the Vercel team's suffix so that no other `vercel.app` site is allowed. It changes if the career site moves to another Vercel team.
+
+The career site calls `POST /warmup` as soon as a page loads, then `POST /chat` with `{ user_id, message }`, where `user_id` is a random UUID per conversation. It sends no credentials. It relies on this contract, recorded in its [ADR-028](https://github.com/aortegablasi96/career-site/blob/main/docs/decisions/architecture-decisions/ADR-028-a-chat-calls-the-digital-twins-api-from-the-readers-browser.md), so a change to it breaks the career site's chat:
+
+- a `reply` string in a 200 answer to `/chat`, written in Markdown;
+- 503 with `Retry-After` while the engine is warming up;
+- 429 above 20 requests a minute for one `user_id`;
+- messages of at most 2,000 characters.
