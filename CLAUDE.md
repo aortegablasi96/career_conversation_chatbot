@@ -8,17 +8,18 @@ AI-powered conversational chatbot representing Andreu Ortega as a professional p
 
 ## Commands
 
-### Backend (Python 3.11.9, from `backend/` directory)
+### Backend (Python 3.11.9)
+`pyproject.toml`, `uv.lock` and `.venv` live at the **repo root**; `backend/requirements.txt` is what Render installs. Run the commands below from `backend/` (uv finds the root project automatically, so `uv run` works from there too).
 ```bash
 # Install dependencies (uv preferred; pip also works)
-uv sync                        # preferred — respects uv.lock
+uv sync                        # preferred — respects uv.lock (run from repo root)
 pip install -r requirements.txt  # fallback
 
 # Run backend dev server
 python -m uvicorn api.api_main:app --host 0.0.0.0 --port 8000 --reload
 
-# Rebuild vector knowledge base from markdown files
-python data_pipeline/ingest.py
+# Rebuild vector knowledge base from markdown files (full rebuild)
+python data_pipeline/ingest.py   # or: uv run data_pipeline/ingest.py
 
 # Local Gradio UI (backend-only testing, no frontend needed)
 python app/career_conversation_chatbot.py
@@ -63,13 +64,13 @@ User message (Next.js)
 - `models/state.py` — Pydantic `State` model passed through the graph
 - `agents_folder/` — OpenAI Agents SDK agent definitions (one file per agent)
 - `data_pipeline/ingest.py` — loads markdown from `knowledge-base/`, embeds with `text-embedding-3-small`, stores in Chroma (no chunking currently)
-- `storage/vector_db/` — persistent Chroma vector database (not committed)
+- `storage/vector_db/` — persistent Chroma vector database (committed; Render serves the committed copy)
 
 ### Frontend Structure (`frontend/`)
 - Next.js 15 App Router with TypeScript
 - `app/layout.tsx` — wraps everything in `AppLoader` for warmup
 - `app/page.tsx` — renders `ChatWindow`
-- `components/AppLoader.tsx` — hits `/warmup` on mount, shows spinner until ready; **hardcodes the Render backend URL** (change this when developing against a local backend)
+- `components/AppLoader.tsx` — hits `${NEXT_PUBLIC_API_URL}/warmup` on mount, shows spinner until ready
 - `components/ChatWindow.tsx` — full chat UI; manages messages, loading state, per-session UUID
 - `lib/api.ts` — `sendMessage()` using `NEXT_PUBLIC_API_URL`
 - Tailwind CSS 4, Framer Motion, ReactMarkdown + remark-gfm
@@ -113,7 +114,7 @@ Retrieval logic lives alongside the conversation agent, not in a separate module
 5. Cohere `rerank-english-v3.0` reranking (top 15, `FILTER_K=15`)
 
 ### Knowledge Base
-Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline prepends a `[Category: {doc_type} | Document: {name}]` prefix before embedding, stores whole documents as single vectors (no chunking), and serialises the BM25 index to `storage/bm25_index.pkl`. Both storage artifacts are gitignored.
+Markdown files in `backend/knowledge-base/` organized by: `certifications/`, `courses/`, `experiences/`, `languages/`, `profile/`, `skills/`, `studies/`. The ingest pipeline prepends a `[Category: {doc_type} | Document: {name}]` prefix before embedding, stores whole documents as single vectors (no chunking), and serialises the BM25 index to `storage/bm25_index.pkl`. Both storage artifacts are **committed to git** — Render deploys them as-is and does not run ingest. After editing the knowledge base, re-run ingest and commit all of `backend/storage/` (including the deleted old and new Chroma collection UUID folders), otherwise production keeps serving the old data.
 
 ## Engine / Session Architecture
 
@@ -134,14 +135,17 @@ The `trace_id` doubles as the LangGraph `thread_id` for `MemorySaver` checkpoint
 - `TELEGRAM_WEBHOOK_URL` — optional override for Telegram webhook base URL (defaults to Render's `RENDER_EXTERNAL_URL`; set this when testing locally via ngrok)
 
 **Frontend** (`frontend/.env.local`):
-- `NEXT_PUBLIC_API_URL` — backend URL (used by `lib/api.ts`; `AppLoader.tsx` hardcodes the Render URL separately)
+- `NEXT_PUBLIC_API_URL` — backend URL (used by both `lib/api.ts` and `AppLoader.tsx`)
+
+Templates for both live in `backend/.env.example` and `frontend/.env.example`.
 
 ## Deployment
 
 - **Backend**: Render (configured via `backend/render.yaml`, free plan, auto-scales to zero). Build: `pip install -r requirements.txt`. Start: `python -m uvicorn api.api_main:app --host 0.0.0.0 --port $PORT`
 - **Frontend**: Vercel
 - **AppLoader pattern**: Frontend hits `/warmup` on page load to pre-warm the backend before showing the chat UI, mitigating Render cold starts
-- **CORS origins**: `localhost:3000`, `career-conversation-chatbot.onrender.com`, `career-conversation-chatbot.vercel.app`
+- **CORS origins**: `localhost:3000`, `career-conversation-chatbot.onrender.com`, `career-conversation-chatbot.vercel.app`, `andreuortegablasi.com`, plus a regex for the personal site's Vercel preview deployments (`career-site-*-andreus-projects-f43ec5ad.vercel.app`)
+- **Deploy flow**: pushing to `main` redeploys the backend on Render via auto-deploy (knowledge base, DB, agent prompts) and the frontend on Vercel
 
 ## Key Design Decisions
 
