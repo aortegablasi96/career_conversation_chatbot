@@ -1,6 +1,8 @@
 from langchain_core.messages import SystemMessage, AIMessage
 from typing import Any, Dict
 from agents import RunConfig, Runner
+from langgraph.config import get_stream_writer
+from openai.types.responses import ResponseTextDeltaEvent
 
 from models.state import State
 from resources.invalid_messages import INVALID_MESSAGES
@@ -159,10 +161,17 @@ class Nodes:
             Maintain conversational continuity if this is a follow-up question.
         """
 
-        result = await Runner.run(
+        # Forward answer tokens to astream(stream_mode="custom"); a no-op under ainvoke
+        writer = get_stream_writer()
+
+        result = Runner.run_streamed(
             conversation_agent,
             conversation_input
         )
+
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                writer({"type": "token", "content": event.data.delta})
 
         state.messages.append({"role": "assistant", "content": result.final_output})
         state.final_response = result.final_output

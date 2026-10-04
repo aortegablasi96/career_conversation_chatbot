@@ -41,7 +41,7 @@ There is no test suite for either backend or frontend.
 ```
 User message (Next.js)
   → AppLoader: POST /warmup (builds LangGraph engine once, on cold start)
-  → POST /chat (FastAPI, per-user session)
+  → POST /chat/stream (FastAPI, per-user session; SSE token stream — /chat is the non-streaming twin)
   → ChatbotService → LangGraph state machine
       ├─ filter node: validates topic is about Andreu, classifies intent (info/contact)
       ├─ invalid node: returns fixed fallback response
@@ -55,11 +55,11 @@ User message (Next.js)
 
 ### Backend Structure (`backend/`)
 - `api/api_main.py` — FastAPI app, CORS, router registration
-- `api/routes/chatbot.py` — `/warmup` and `/chat` endpoints; global shared engine + lightweight per-user sessions
+- `api/routes/chatbot.py` — `/warmup`, `/chat` and `/chat/stream` endpoints; global shared engine + lightweight per-user sessions
 - `api/routes/telegram.py` — Telegram webhook integration
 - `api/routes/app.py` — `/health` endpoint
 - `app/career_conversation_chatbot.py` — `ChatbotService` class; also launches Gradio UI when run directly
-- `graph/graph.py` — `Graph` class: builds LangGraph `StateGraph`, uses `MemorySaver` for checkpointing
+- `graph/graph.py` — `Graph` class: builds LangGraph `StateGraph` (no checkpointer); `run_superstep` (ainvoke) and `astream_superstep` (yields `token` events from the info node via `get_stream_writer`, then a `done` event with the full reply)
 - `graph/nodes.py` — `Nodes` class: async methods for each graph node; imports and calls all four agents
 - `models/state.py` — Pydantic `State` model passed through the graph
 - `agents_folder/` — OpenAI Agents SDK agent definitions (one file per agent)
@@ -72,7 +72,7 @@ User message (Next.js)
 - `app/page.tsx` — renders `ChatWindow`
 - `components/AppLoader.tsx` — hits `${NEXT_PUBLIC_API_URL}/warmup` on mount, shows spinner until ready
 - `components/ChatWindow.tsx` — full chat UI; manages messages, loading state, per-session UUID
-- `lib/api.ts` — `sendMessage()` using `NEXT_PUBLIC_API_URL`
+- `lib/api.ts` — `streamMessage()` reads `/chat/stream` SSE frames via `fetch` + `ReadableStream`, using `NEXT_PUBLIC_API_URL`
 - Tailwind CSS 4, Framer Motion, ReactMarkdown + remark-gfm
 
 ### State Machine (`backend/models/state.py`)
@@ -93,7 +93,7 @@ Pydantic `State` with 16 fields passed through the entire graph:
 | `final_response` | whichever terminal node executes |
 | `unknown_question_logged` | conversation node |
 | `contact_recorded` / `pushover_sent` | contact node |
-| `trace_id` | Caller (doubles as LangGraph `thread_id`) |
+| `trace_id` | Caller |
 
 ### Agents (`backend/agents_folder/`)
 All agents use the OpenAI Agents SDK (`from agents import Agent, Runner, function_tool`) with Pydantic structured outputs:
@@ -122,7 +122,7 @@ The backend uses a two-tier pattern to avoid rebuilding LangGraph on every reque
 - **Global engine** (`ChatbotService` + `Graph`): built once on `/warmup`, shared across all users
 - **Per-user session**: lightweight dict with `trace_id` (UUID) and `memory` (last 8 messages), stored in a `TTLCache(maxsize=500, ttl=3600)` — sessions expire after 1 hour of inactivity
 
-The `trace_id` doubles as the LangGraph `thread_id` for `MemorySaver` checkpointing.
+The graph has no checkpointer: each turn builds a fresh `State`, and conversation memory lives only in the session. `/chat` and `/chat/stream` append the user + assistant messages to `memory` after each turn and re-assign the session, which resets its TTL.
 
 ## Environment Variables
 

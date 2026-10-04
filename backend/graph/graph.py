@@ -1,5 +1,4 @@
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
 from PIL import Image
 import io
 import asyncio
@@ -14,7 +13,6 @@ load_dotenv(override=True)
 class Graph:
     def __init__(self,trace_id=None) -> None:
         self.trace_id = trace_id
-        self.memory = MemorySaver()     
         self.nodes = Nodes()
         self.graph = None
     
@@ -38,8 +36,10 @@ class Graph:
         graph_builder.add_edge("contact",END)
         graph_builder.add_edge("info",END)
 
-        # Compile the graph
-        self.graph = graph_builder.compile(checkpointer=self.memory)
+        # Compile the graph. No checkpointer: each turn starts from a fresh State and
+        # conversation memory lives in the per-user session, so checkpoints were only
+        # piling up in one shared thread.
+        self.graph = graph_builder.compile()
 
     def filter_router(self, state: State):
 
@@ -54,28 +54,8 @@ class Graph:
 
         return "invalid"
 
-    async def run_superstep(self, message: str, history: list[dict]):
-        """
-        Run one conversation turn.
-
-        Flow:
-        User message
-            -> Filter
-            -> Routing
-                -> Invalid
-                -> Contact
-                -> RAG conversation
-        """
-
-        config = {
-            "configurable": {
-                "thread_id": self.trace_id
-            }
-        }
-
-        # -------------------------------------------------
-        # INITIAL STATE
-        # -------------------------------------------------
+    def initial_state(self, message: str, history: list[dict]) -> dict:
+        """ Build the fresh State for one conversation turn. """
 
         state = State(
             query=message,
@@ -108,20 +88,44 @@ class Graph:
             trace_id=self.trace_id,
         )
 
-        # -------------------------------------------------
-        # EXECUTE GRAPH
-        # -------------------------------------------------
+        return state.model_dump()
 
-        result = await self.graph.ainvoke(
-            state.model_dump(),
-            config=config,
-        )
+    async def run_superstep(self, message: str, history: list[dict]):
+        """
+        Run one conversation turn.
 
-        # -------------------------------------------------
-        # RETURN FINAL RESPONSE
-        # -------------------------------------------------
+        Flow:
+        User message
+            -> Filter
+            -> Routing
+                -> Invalid
+                -> Contact
+                -> RAG conversation
+        """
+
+        result = await self.graph.ainvoke(self.initial_state(message, history))
 
         return result["final_response"]
+
+    async def astream_superstep(self, message: str, history: list[dict]):
+        """
+        Run one conversation turn, yielding events as they happen:
+        {"type": "token", "content": ...} for each answer token from the info node,
+        then {"type": "done", "content": <full final response>} for every route.
+        """
+
+        final_state = None
+
+        async for mode, chunk in self.graph.astream(
+            self.initial_state(message, history),
+            stream_mode=["custom", "values"],
+        ):
+            if mode == "custom":
+                yield chunk
+            else:
+                final_state = chunk
+
+        yield {"type": "done", "content": final_state["final_response"]}
 
     def get_nodes_diagram(self):
         """ Create an image of the Graph diagram."""

@@ -31,7 +31,12 @@ class ChatbotService:
             )
 
         return results
-    
+
+    async def stream(self, message, history):
+        """ Handle user message submission, yielding token and done events. """
+        async for event in self.graph.astream_superstep(message, history):
+            yield event
+
 async def main(trace_id):
     import gradio as gr
     app = ChatbotService(trace_id)

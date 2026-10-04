@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sendMessage, WarmingUpError, RateLimitError } from "@/lib/api";
+import { streamMessage, WarmingUpError, RateLimitError } from "@/lib/api";
 import { v4 as uuidv4 } from "uuid";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -60,6 +60,7 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [waitingForReply, setWaitingForReply] = useState(false);
 
   const threadIdRef = useRef<string>(uuidv4());
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -98,14 +99,34 @@ export default function ChatWindow() {
     const currentInput = input;
     setInput("");
     setLoading(true);
+    setWaitingForReply(true);
+
+    // The assistant bubble is created on the first token and updated in place
+    const assistantId = uuidv4();
+    const setAssistantContent = (update: (content: string) => string) => {
+      setWaitingForReply(false);
+      setMessages((prev) =>
+        prev.some((m) => m.id === assistantId)
+          ? prev.map((m) => (m.id === assistantId ? { ...m, content: update(m.content) } : m))
+          : [...prev, { id: assistantId, role: "assistant", content: update("") }]
+      );
+    };
 
     try {
-      const response = await sendMessage(currentInput, threadIdRef.current);
+      let finished = false;
 
-      setMessages((prev) => [
-        ...prev,
-        { id: uuidv4(), role: "assistant", content: response.reply },
-      ]);
+      await streamMessage(currentInput, threadIdRef.current, (event) => {
+        if (event.type === "token") {
+          setAssistantContent((content) => content + event.content);
+        } else if (event.type === "done") {
+          finished = true;
+          setAssistantContent(() => event.content);
+        } else {
+          throw new Error("stream_error");
+        }
+      });
+
+      if (!finished) throw new Error("stream_incomplete");
     } catch (error) {
       let content = "Something went wrong while contacting the chatbot.";
       if (error instanceof WarmingUpError) {
@@ -113,9 +134,10 @@ export default function ChatWindow() {
       } else if (error instanceof RateLimitError) {
         content = "You're sending messages too quickly. Please wait a moment before trying again.";
       }
-      setMessages((prev) => [...prev, { id: uuidv4(), role: "assistant", content }]);
+      setAssistantContent(() => content);
     } finally {
       setLoading(false);
+      setWaitingForReply(false);
     }
   }
 
@@ -240,7 +262,7 @@ export default function ChatWindow() {
                 ))}
               </AnimatePresence>
 
-              {loading && (
+              {waitingForReply && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

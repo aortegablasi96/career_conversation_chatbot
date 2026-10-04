@@ -1,9 +1,11 @@
 import uuid
 import asyncio
+import json
 import time
+import traceback
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from cachetools import TTLCache
 
 from app.career_conversation_chatbot import ChatbotService
@@ -22,6 +24,7 @@ engine_lock = asyncio.Lock()
 # max 500 concurrent users, sessions expire after 1 hour of inactivity
 # -----------------------------
 sessions: TTLCache = TTLCache(maxsize=500, ttl=3600)
+MAX_MEMORY_MESSAGES = 8
 
 # -----------------------------
 # RATE LIMITING
@@ -93,6 +96,38 @@ def get_session(user_id: str):
     return sessions[user_id]
 
 
+def remember_turn(user_id: str, session: dict, message: str, reply: str):
+    """
+    Store the finished turn in the session's sliding window.
+    Re-assigning the session also resets its TTL, so it expires
+    after 1 hour of inactivity rather than 1 hour after creation.
+    """
+    session["memory"] = (session["memory"] + [
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": reply},
+    ])[-MAX_MEMORY_MESSAGES:]
+
+    sessions[user_id] = session
+
+
+def check_request(req: ChatRequest):
+    """
+    Shared /chat and /chat/stream guards. Returns a 503 response while warming up,
+    raises 429 when rate limited, and returns None when the request can run.
+    """
+    if not engine_ready:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "warming_up"},
+            headers={"Retry-After": "10"},
+        )
+
+    if not _check_rate_limit(req.user_id):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait before sending another message.")
+
+    return None
+
+
 # -----------------------------
 # WARMUP ENDPOINT (FRONTEND DRIVEN)
 # -----------------------------
@@ -113,15 +148,9 @@ async def warmup():
 @router.post("/chat")
 async def chat(req: ChatRequest):
 
-    if not engine_ready:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "warming_up"},
-            headers={"Retry-After": "10"},
-        )
-
-    if not _check_rate_limit(req.user_id):
-        raise HTTPException(status_code=429, detail="Too many requests. Please wait before sending another message.")
+    rejection = check_request(req)
+    if rejection:
+        return rejection
 
     session = get_session(req.user_id)
 
@@ -130,7 +159,44 @@ async def chat(req: ChatRequest):
         session["memory"]
     )
 
+    remember_turn(req.user_id, session, req.message, reply)
+
     return {
         "user_id": req.user_id,
         "reply": reply
     }
+
+
+# -----------------------------
+# STREAMING CHAT ENDPOINT (SERVER-SENT EVENTS)
+# -----------------------------
+@router.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    """
+    Same as /chat, but streams `data: {json}` frames:
+    {"type": "token"} per answer token, then {"type": "done"} with the
+    full reply, or {"type": "error"} if the turn fails mid-stream.
+    """
+
+    rejection = check_request(req)
+    if rejection:
+        return rejection
+
+    session = get_session(req.user_id)
+
+    async def event_stream():
+        try:
+            async for event in engine.stream(req.message, session["memory"]):
+                if event["type"] == "done":
+                    remember_turn(req.user_id, session, req.message, event["content"])
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception:
+            traceback.print_exc()
+            yield f"data: {json.dumps({'type': 'error'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        # Stop proxies from buffering the stream into a single response
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
