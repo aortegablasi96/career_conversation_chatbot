@@ -30,6 +30,8 @@ VALID — subject is Andreu (directly or implied):
 - "Can you give me more details about what you did at ABB?"  ← company as context
 - "tell me more" / "and that certification?" ← follow-ups inherit prior subject
 
+They also can refer to him in 3rd person (i.e. is he open to new opportunities?)
+
 INVALID — a person or organization IS the subject (not Andreu's career):
 - "What certifications does Elon Musk have?"
 - "What is ABB known for as a company?" / "Who founded Google?"

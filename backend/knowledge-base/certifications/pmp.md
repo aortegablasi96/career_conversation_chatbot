@@ -1,4 +1,4 @@
-# Certification: Project Management Principles (PMP)
+# Certification: Project Management Professional (PMP)
 
 **Institution:** Project Management Institution (PMI)  
 **Date of emission:** June 2024
