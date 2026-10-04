@@ -1,3 +1,11 @@
+try:
+    # Local only: trust the OS certificate store (e.g. antivirus HTTPS scanning on Windows).
+    # Not in requirements.txt, so this is a no-op on Render.
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 import asyncio
 from agents import trace, gen_trace_id, Runner
 from dotenv import load_dotenv
