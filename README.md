@@ -18,6 +18,31 @@ User message (Next.js frontend)
   → Response returned to frontend
 ```
 
+### Endpoints
+
+| Endpoint | What it does |
+| -------- | ------------ |
+| `POST /warmup` | Builds the engine once and answers `{"status": "ready"}` |
+| `POST /chat` | Takes `{ user_id, message }` and answers `{ user_id, reply }` once the whole turn is done |
+| `POST /chat/stream` | Takes the same body and streams the reply as Server-Sent Events. This repository's frontend and the career site use it |
+
+Both chat endpoints run the same checks first: 422 for a message over 2,000 characters, 503 with
+`Retry-After: 10` while the engine is warming up, and 429 above 20 requests a minute for one
+`user_id`. These come back as JSON before anything is streamed. The Telegram bot calls the engine
+through its own webhook, not through these endpoints.
+
+Otherwise `/chat/stream` answers 200 with `text/event-stream`, and sends one `data:` line of JSON
+per frame, each followed by a blank line:
+
+- `{"type": "token", "content": "…"}` for each piece the conversation agent writes;
+- `{"type": "done", "content": "…"}` once, at the end, with the whole reply in Markdown;
+- `{"type": "error"}` instead of `done`, if the turn fails partway.
+
+A reply the conversation agent doesn't write sends `done` alone, such as the fixed reply to an
+off-topic question, or the contact flow's. The session's memory takes the turn only as `done` is
+sent. A turn that ends in `error` leaves the memory as it was, and so does one whose caller
+disconnects first, since the server then cancels the run.
+
 ## Stack
 
 | Layer | Technology |
@@ -117,9 +142,11 @@ The API is called from browsers by two sites, so `backend/api/api_main.py` allow
 
 `allow_origins` matches exact addresses only; a `*` inside an address there is not a wildcard. The previews' pattern is therefore `allow_origin_regex`, `^https://career-site-[a-z0-9-]+-andreus-projects-f43ec5ad\.vercel\.app$`, which pins the Vercel team's suffix so that no other `vercel.app` site is allowed. It changes if the career site moves to another Vercel team.
 
-The career site calls `POST /warmup` as soon as a page loads, then `POST /chat` with `{ user_id, message }`, where `user_id` is a random UUID per conversation. It sends no credentials. It relies on this contract, recorded in its [ADR-028](https://github.com/aortegablasi96/career-site/blob/main/docs/decisions/architecture-decisions/ADR-028-a-chat-calls-the-digital-twins-api-from-the-readers-browser.md), so a change to it breaks the career site's chat:
+The career site calls `POST /warmup` as soon as a page loads, then `POST /chat/stream` with `{ user_id, message }`, where `user_id` is a random UUID per conversation. It sends no credentials. It relies on this contract, recorded in its [ADR-028](https://github.com/aortegablasi96/career-site/blob/main/docs/decisions/architecture-decisions/ADR-028-a-chat-calls-the-digital-twins-api-from-the-readers-browser.md) and [ADR-030](https://github.com/aortegablasi96/career-site/blob/main/docs/decisions/architecture-decisions/ADR-030-the-chat-reads-the-answer-as-it-is-written.md), so a change to it breaks the career site's chat:
 
-- a `reply` string in a 200 answer to `/chat`, written in Markdown;
+- the frames of `/chat/stream` above, with the whole reply, in Markdown, in `done`;
+- the memory taking a turn only as `done` is sent, so the career site can offer to send a question again after `error`;
+- the stream reaching the browser piece by piece, unbuffered and uncompressed;
 - 503 with `Retry-After` while the engine is warming up;
 - 429 above 20 requests a minute for one `user_id`;
 - messages of at most 2,000 characters.
